@@ -1,1 +1,58 @@
 project_id = "ctebkrgvjevcspcflnpv"
+
+[functions.transcribe-audio]
+verify_jwt = true
+
+[functions.process-meeting]
+verify_jwt = true
+
+[functions.send-email]
+verify_jwt = true
+
+[functions.resend-webhook]
+verify_jwt = false
+
+[functions.admin-create-user]
+verify_jwt = true
+
+[functions.admin-delete-users]
+verify_jwt = true
+
+[functions.admin-toggle-user]
+verify_jwt = true
+
+[functions.admin-reset-password]
+verify_jwt = true
+
+[functions.admin-manage-role]
+verify_jwt = true
+
+[functions.admin-factory-reset]
+verify_jwt = true
+
+[functions.admin-delete-meetings]
+verify_jwt = true
+
+[functions.admin-delete-departments]
+verify_jwt = true
+
+[functions.get-api-keys-info]
+verify_jwt = true
+
+[functions.reveal-api-key]
+verify_jwt = true
+
+[functions.update-api-key]
+verify_jwt = true
+
+[functions.validate-api-key]
+verify_jwt = true
+
+[functions.extract-service-data]
+verify_jwt = true
+
+[functions.send-renewal-alerts]
+verify_jwt = false
+
+[functions.generate-followup-email]
+verify_jwt = true
