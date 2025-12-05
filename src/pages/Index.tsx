@@ -159,65 +159,85 @@ const Index = () => {
       setProcessingStep('upload');
       console.log('[handleRecordingComplete] Processing step set to upload');
 
-      // Get current user for secure file storage
-      const { data: { session: currentSession }, error: sessionError } = await supabase.auth.getSession();
-      console.log('[handleRecordingComplete] Session check:', { 
+      // Validate audio size first
+      console.log('[Validation] Audio blob size:', audioBlob.size, 'bytes');
+      if (audioBlob.size < 1000) {
+        throw new Error(t('errors.audioTooShort', 'Áudio demasiado curto ou corrompido. Por favor, grave pelo menos 3 segundos de áudio com voz clara.'));
+      }
+
+      // Get current user for secure file storage with timeout
+      console.log('[Auth] Getting session...');
+      let currentSession: any = null;
+      try {
+        const sessionPromise = supabase.auth.getSession();
+        const sessionTimeoutPromise = new Promise<never>((_, reject) => {
+          setTimeout(() => reject(new Error('Session timeout')), 10000);
+        });
+        const { data, error: sessionError } = await Promise.race([sessionPromise, sessionTimeoutPromise]) as any;
+        
+        if (sessionError) {
+          console.error('[Auth] Session error:', sessionError);
+          throw new Error('Erro de autenticação. Por favor, faça login novamente.');
+        }
+        currentSession = data?.session;
+      } catch (authError: any) {
+        console.error('[Auth] Failed to get session:', authError);
+        throw new Error('Erro de autenticação. Por favor, recarregue a página e faça login novamente.');
+      }
+      
+      console.log('[Auth] Session check:', { 
         hasSession: !!currentSession, 
-        hasUser: !!currentSession?.user, 
-        error: sessionError 
+        hasUser: !!currentSession?.user 
       });
       
       if (!currentSession?.user) {
-        throw new Error('User must be authenticated to upload recordings');
+        throw new Error('Utilizador deve estar autenticado para gravar. Por favor, faça login.');
       }
 
       // Capture actual recording date/time from device
       const recordingDateTime = new Date().toISOString();
 
       // Upload audio to storage - sanitize filename and include user ID for RLS
-      const sanitizedName = salesRepName
+      const sanitizedName = (salesRepName || 'user')
         .normalize('NFD')
         .replace(/[\u0300-\u036f]/g, '') // Remove accents
         .replace(/[^a-zA-Z0-9]/g, '-')   // Replace special chars with hyphen
         .replace(/-+/g, '-')             // Replace multiple hyphens with single
-        .replace(/^-|-$/g, '');          // Remove leading/trailing hyphens
+        .replace(/^-|-$/g, '') || 'user';          // Remove leading/trailing hyphens
       const fileName = `${Date.now()}-${sanitizedName}.webm`;
       const filePath = `${currentSession.user.id}/${fileName}`;
       
       // Upload audio with timeout to prevent hanging
       console.log('[Upload] starting upload to storage', { filePath, blobSize: audioBlob.size });
       
-      const uploadPromise = supabase.storage
-        .from('audio-recordings')
-        .upload(filePath, audioBlob, {
-          contentType: 'audio/webm',
-          upsert: false,
-        });
-      
-      // Add 60 second timeout for upload
-      const timeoutPromise = new Promise<never>((_, reject) => {
-        setTimeout(() => reject(new Error('Upload timeout - please try again')), 60000);
-      });
-      
-      const { error: uploadError } = await Promise.race([uploadPromise, timeoutPromise]);
-
-      if (uploadError) {
-        console.error('[Upload] failed:', uploadError);
-        throw new Error(`Falha no upload: ${uploadError.message}`);
+      try {
+        const uploadResult = await Promise.race([
+          supabase.storage
+            .from('audio-recordings')
+            .upload(filePath, audioBlob, {
+              contentType: audioBlob.type || 'audio/webm',
+              upsert: false,
+            }),
+          new Promise<never>((_, reject) => {
+            setTimeout(() => reject(new Error('Upload timeout - tente novamente')), 60000);
+          })
+        ]);
+        
+        if ('error' in uploadResult && uploadResult.error) {
+          console.error('[Upload] failed:', uploadResult.error);
+          throw new Error(`Falha no upload: ${uploadResult.error.message}`);
+        }
+        console.log('[Upload] success');
+      } catch (uploadErr: any) {
+        console.error('[Upload] exception:', uploadErr);
+        throw new Error(uploadErr.message || 'Falha ao carregar áudio. Tente novamente.');
       }
-      console.log('[Upload] success');
 
       const { data: { publicUrl } } = supabase.storage
         .from('audio-recordings')
         .getPublicUrl(filePath);
 
       setProcessingStep('transcribe');
-
-      // Validate audio size
-      console.log('[Validation] Audio blob size:', audioBlob.size, 'bytes');
-      if (audioBlob.size < 1000) {
-        throw new Error(t('errors.audioTooShort', 'Áudio demasiado curto ou corrompido. Por favor, grave pelo menos 3 segundos de áudio com voz clara.'));
-      }
 
       // Get mime type from blob
       const mimeType = audioBlob.type || 'audio/webm';
