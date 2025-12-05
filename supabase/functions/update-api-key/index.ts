@@ -27,7 +27,6 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Decode JWT (verify_jwt=true already validated)
     const token = authHeader.replace('Bearer ', '').trim();
     let userId: string | null = null;
     let userEmail: string | null = null;
@@ -49,12 +48,12 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Verify admin role
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
+    // Check admin role
     const { data: roles } = await supabaseAdmin
       .from('user_roles')
       .select('role')
@@ -71,47 +70,39 @@ const handler = async (req: Request): Promise<Response> => {
     const requestData = await req.json();
     const { keyName, keyValue, action } = updateSchema.parse(requestData);
 
-    // Check if key is readonly (only system keys)
-    if (keyName.startsWith('SUPABASE_')) {
-      return new Response(
-        JSON.stringify({ error: 'Esta chave não pode ser modificada' }),
-        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Allowed keys that can be managed
-    const allowedKeys = ['OPENAI_API_KEY', 'RESEND_API_KEY', 'RESEND_FROM', 'RESEND_WEBHOOK_SECRET'];
-    if (!allowedKeys.includes(keyName)) {
-      return new Response(
-        JSON.stringify({ error: 'Esta chave não pode ser gerida por aqui' }),
-        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Get project reference
-    const projectRef = Deno.env.get('SUPABASE_URL')?.split('//')[1]?.split('.')[0];
-    if (!projectRef) {
-      throw new Error('Invalid Supabase configuration');
-    }
-
-    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    // Get the key from database
+    const { data: existingKey } = await supabaseAdmin
+      .from('api_keys_config')
+      .select('id, service_name')
+      .eq('key_name', keyName)
+      .single();
 
     if (action === 'delete') {
-      // Delete the secret
-      const deleteResponse = await fetch(`https://api.supabase.com/v1/projects/${projectRef}/secrets?name=${keyName}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${serviceRoleKey}`,
-        },
-      });
+      if (!existingKey) {
+        return new Response(
+          JSON.stringify({ error: 'Chave não encontrada' }),
+          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
 
-      if (!deleteResponse.ok) {
-        const errorData = await deleteResponse.text();
-        console.error('Failed to delete secret:', errorData);
+      // Set key_value to empty string (we keep the row for structure)
+      const { error: updateError } = await supabaseAdmin
+        .from('api_keys_config')
+        .update({ 
+          key_value: '',
+          updated_at: new Date().toISOString(),
+          updated_by: userId
+        })
+        .eq('key_name', keyName);
+
+      if (updateError) {
+        console.error('Error clearing key:', updateError);
         throw new Error('Falha ao apagar API key');
       }
+
+      console.log(`[SECURITY] API key ${keyName} cleared by user ${userEmail ?? userId}`);
     } else {
-      // Update the secret
+      // Update action
       if (!keyValue) {
         return new Response(
           JSON.stringify({ error: 'Valor da chave é obrigatório' }),
@@ -119,31 +110,50 @@ const handler = async (req: Request): Promise<Response> => {
         );
       }
 
-      const updateResponse = await fetch(`https://api.supabase.com/v1/projects/${projectRef}/secrets`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${serviceRoleKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify([{
-          name: keyName,
-          value: keyValue,
-        }]),
-      });
+      if (existingKey) {
+        // Update existing key
+        const { error: updateError } = await supabaseAdmin
+          .from('api_keys_config')
+          .update({ 
+            key_value: keyValue,
+            updated_at: new Date().toISOString(),
+            updated_by: userId
+          })
+          .eq('key_name', keyName);
 
-      if (!updateResponse.ok) {
-        const errorData = await updateResponse.text();
-        console.error('Failed to update secret:', errorData);
-        throw new Error('Falha ao atualizar API key');
+        if (updateError) {
+          console.error('Error updating key:', updateError);
+          throw new Error('Falha ao atualizar API key');
+        }
+      } else {
+        // Insert new key
+        const { error: insertError } = await supabaseAdmin
+          .from('api_keys_config')
+          .insert({
+            key_name: keyName,
+            key_value: keyValue,
+            service_name: keyName.split('_')[0],
+            description: `Configurado por ${userEmail || userId}`,
+            category: keyName.includes('OPENAI') ? 'AI Services' : 'Email Services',
+            created_by: userId,
+            updated_by: userId
+          });
+
+        if (insertError) {
+          console.error('Error inserting key:', insertError);
+          throw new Error('Falha ao criar API key');
+        }
       }
+
+      console.log(`[SECURITY] API key ${keyName} updated by user ${userEmail ?? userId}`);
     }
 
-    // Determine service name
-    let serviceName = keyName;
+    // Determine service name for audit
+    let serviceName = existingKey?.service_name || keyName;
     if (keyName.includes('OPENAI')) serviceName = 'OpenAI';
     else if (keyName.includes('RESEND')) serviceName = 'Resend';
 
-    // Log the action (CRITICAL SECURITY LOG - non-blocking)
+    // Log the action
     try {
       await supabaseAdmin.from('api_key_audit_logs').insert({
         user_id: userId,
@@ -154,27 +164,20 @@ const handler = async (req: Request): Promise<Response> => {
         ip_address: req.headers.get('x-forwarded-for')?.split(',')[0] || null,
         user_agent: req.headers.get('user-agent')
       });
-      
-      console.log(`[SECURITY] API key ${keyName} ${action === 'delete' ? 'deleted' : 'updated'} by user ${userEmail ?? userId}`);
     } catch (auditError) {
       console.error('Failed to log audit event:', auditError);
     }
 
     return new Response(
       JSON.stringify({ success: true }),
-      {
-        status: 200,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      }
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
+
   } catch (error: any) {
     console.error('Error in update-api-key:', error);
     return new Response(
       JSON.stringify({ error: error.message }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      }
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 };
