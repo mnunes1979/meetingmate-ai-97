@@ -94,14 +94,14 @@ const AdminControlPanel = () => {
       }
 
       toast({
-        title: "Success",
-        description: "Operation completed successfully",
+        title: "Sucesso",
+        description: "Operação concluída com sucesso",
       });
     } catch (error: any) {
       console.error(`Error executing ${action}:`, error);
       toast({
-        title: "Error",
-        description: error.message || "Operation failed",
+        title: "Erro",
+        description: error.message || "Operação falhou",
         variant: "destructive",
       });
     } finally {
@@ -123,15 +123,15 @@ const AdminControlPanel = () => {
   }
 
   return (
-    <AdminLayout title="Admin Control Panel">
+    <AdminLayout title="Painel de Controlo Admin">
       <div className="space-y-6">
         <Card className="p-6 bg-destructive/5 border-destructive/20">
           <div className="flex items-start gap-4">
             <AlertTriangle className="w-6 h-6 text-destructive mt-1" />
             <div>
-              <h3 className="font-semibold text-destructive mb-2">Danger Zone</h3>
+              <h3 className="font-semibold text-destructive mb-2">Zona de Perigo</h3>
               <p className="text-sm text-muted-foreground">
-                These actions are irreversible. Use with extreme caution. All actions are logged for audit purposes.
+                Estas ações são irreversíveis. Use com extrema cautela. Todas as ações são registadas para auditoria.
               </p>
             </div>
           </div>
@@ -142,9 +142,9 @@ const AdminControlPanel = () => {
             <div className="flex items-start gap-4">
               <Trash2 className="w-8 h-8 text-destructive" />
               <div className="flex-1">
-                <h3 className="font-semibold mb-2">Delete All Users</h3>
+                <h3 className="font-semibold mb-2">Eliminar Todos os Utilizadores</h3>
                 <p className="text-sm text-muted-foreground mb-4">
-                  Permanently delete all users except administrators. This cannot be undone.
+                  Eliminar permanentemente todos os utilizadores exceto administradores. Esta ação não pode ser desfeita.
                 </p>
                 <Button
                   variant="destructive"
@@ -152,7 +152,7 @@ const AdminControlPanel = () => {
                   onClick={() => setConfirmAction('delete-users')}
                   disabled={processing}
                 >
-                  Delete Users
+                  Eliminar Utilizadores
                 </Button>
               </div>
             </div>
@@ -162,9 +162,9 @@ const AdminControlPanel = () => {
             <div className="flex items-start gap-4">
               <Building2 className="w-8 h-8 text-destructive" />
               <div className="flex-1">
-                <h3 className="font-semibold mb-2">Delete All Departments</h3>
+                <h3 className="font-semibold mb-2">Eliminar Todos os Departamentos</h3>
                 <p className="text-sm text-muted-foreground mb-4">
-                  Permanently delete all departments and their associated emails.
+                  Eliminar permanentemente todos os departamentos e emails associados.
                 </p>
                 <Button
                   variant="destructive"
@@ -172,7 +172,7 @@ const AdminControlPanel = () => {
                   onClick={() => setConfirmAction('delete-departments')}
                   disabled={processing}
                 >
-                  Delete Departments
+                  Eliminar Departamentos
                 </Button>
               </div>
             </div>
@@ -182,9 +182,9 @@ const AdminControlPanel = () => {
             <div className="flex items-start gap-4">
               <FileX className="w-8 h-8 text-destructive" />
               <div className="flex-1">
-                <h3 className="font-semibold mb-2">Delete All Meetings</h3>
+                <h3 className="font-semibold mb-2">Eliminar Todas as Reuniões</h3>
                 <p className="text-sm text-muted-foreground mb-4">
-                  Permanently delete all meeting notes across the entire system.
+                  Eliminar permanentemente todas as notas de reunião de todo o sistema.
                 </p>
                 <Button
                   variant="destructive"
@@ -192,7 +192,7 @@ const AdminControlPanel = () => {
                   onClick={() => setConfirmAction('delete-meetings')}
                   disabled={processing}
                 >
-                  Delete Meetings
+                  Eliminar Reuniões
                 </Button>
               </div>
             </div>
@@ -202,9 +202,9 @@ const AdminControlPanel = () => {
             <div className="flex items-start gap-4">
               <RotateCcw className="w-8 h-8 text-destructive" />
               <div className="flex-1">
-                <h3 className="font-semibold mb-2 text-destructive">Factory Reset</h3>
+                <h3 className="font-semibold mb-2 text-destructive">Reset de Fábrica</h3>
                 <p className="text-sm text-muted-foreground mb-4">
-                  Delete ALL data: users (except admins), departments, and meetings. This is the nuclear option.
+                  Eliminar TODOS os dados: utilizadores (exceto admins), departamentos e reuniões. Esta é a opção nuclear.
                 </p>
                 <Button
                   variant="destructive"
@@ -212,7 +212,7 @@ const AdminControlPanel = () => {
                   onClick={() => setConfirmAction('factory-reset')}
                   disabled={processing}
                 >
-                  Factory Reset
+                  Reset de Fábrica
                 </Button>
               </div>
             </div>
@@ -223,25 +223,25 @@ const AdminControlPanel = () => {
       <AlertDialog open={!!confirmAction} onOpenChange={() => setConfirmAction(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogTitle>Tem a certeza absoluta?</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the selected data from the system.
+              Esta ação não pode ser desfeita. Isto irá eliminar permanentemente os dados selecionados do sistema.
               {confirmAction === 'factory-reset' && (
                 <span className="block mt-2 font-semibold text-destructive">
-                  WARNING: This will delete ALL user data except admin accounts!
+                  AVISO: Isto irá eliminar TODOS os dados de utilizadores exceto contas de admin!
                 </span>
               )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={processing}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={processing}>Cancelar</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => confirmAction && executeAction(confirmAction)}
               disabled={processing}
               className="bg-destructive hover:bg-destructive/90"
             >
               {processing && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              Confirm Delete
+              Confirmar Eliminação
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
