@@ -492,6 +492,7 @@ export type Database = {
       }
       meeting_notes: {
         Row: {
+          action_items: Json | null
           created_at: string
           customer_company: string | null
           customer_name: string | null
@@ -501,19 +502,23 @@ export type Database = {
           language: string
           meeting_datetime: string | null
           meeting_duration_min: number | null
+          opportunities: Json | null
           participants: Json | null
           raw_llm_output: Json | null
           risks: Json | null
           sales_rep_name: string | null
           sentiment: string
           sentiment_confidence: number | null
+          sentiment_score: number | null
           summary: string
+          topics: Json | null
           transcript_text: string
           transcript_url: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
+          action_items?: Json | null
           created_at?: string
           customer_company?: string | null
           customer_name?: string | null
@@ -523,19 +528,23 @@ export type Database = {
           language: string
           meeting_datetime?: string | null
           meeting_duration_min?: number | null
+          opportunities?: Json | null
           participants?: Json | null
           raw_llm_output?: Json | null
           risks?: Json | null
           sales_rep_name?: string | null
           sentiment: string
           sentiment_confidence?: number | null
+          sentiment_score?: number | null
           summary: string
+          topics?: Json | null
           transcript_text: string
           transcript_url?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
+          action_items?: Json | null
           created_at?: string
           customer_company?: string | null
           customer_name?: string | null
@@ -545,13 +554,16 @@ export type Database = {
           language?: string
           meeting_datetime?: string | null
           meeting_duration_min?: number | null
+          opportunities?: Json | null
           participants?: Json | null
           raw_llm_output?: Json | null
           risks?: Json | null
           sales_rep_name?: string | null
           sentiment?: string
           sentiment_confidence?: number | null
+          sentiment_score?: number | null
           summary?: string
+          topics?: Json | null
           transcript_text?: string
           transcript_url?: string | null
           updated_at?: string
