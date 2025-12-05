@@ -36,7 +36,6 @@ const MeetingDetail = () => {
   const [loading, setLoading] = useState(true);
   const [meeting, setMeeting] = useState<MeetingData | null>(null);
   const [emailActions, setEmailActions] = useState<any[]>([]);
-  const [calendarEvents, setCalendarEvents] = useState<any[]>([]);
   const navigate = useNavigate();
   const { toast } = useToast();
   const { t, i18n } = useTranslation();
@@ -102,13 +101,6 @@ const MeetingDetail = () => {
         .eq('note_id', id);
       
       setEmailActions(emails || []);
-
-      const { data: events } = await supabase
-        .from('calendar_events')
-        .select('*')
-        .eq('note_id', id);
-      
-      setCalendarEvents(events || []);
 
     } catch (error: any) {
       toast({
@@ -537,132 +529,70 @@ const MeetingDetail = () => {
         )}
 
         {/* Ações Executadas */}
-        {(emailActions.length > 0 || calendarEvents.length > 0) && (
+        {emailActions.length > 0 && (
           <Card className="p-6 space-y-4">
             <h2 className="text-xl font-bold">{t('meetingDetail.executedActions')}</h2>
             
-            {emailActions.length > 0 && (
-              <div className="space-y-3">
-                <h3 className="font-semibold flex items-center gap-2">
-                  <Mail className="w-4 h-4 text-action-email" />
-                  {t('meetingDetail.emails')} ({emailActions.length})
-                </h3>
-                {emailActions.map((action) => {
-                  const isSuccess = action.status === 'sent';
-                  const isError = action.status === 'error';
-                  
-                  return (
-                    <div 
-                      key={action.id} 
-                      className={`p-4 rounded-lg border-2 ${
-                        isSuccess ? 'bg-sentiment-positive/5 border-sentiment-positive/30' :
-                        isError ? 'bg-sentiment-negative/5 border-sentiment-negative/30' :
-                        'bg-background/50 border-border/50'
-                      }`}
-                    >
-                      <div className="flex items-start justify-between gap-4 mb-2">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
-                            <p className="font-semibold">{action.subject}</p>
-                            {isSuccess && <CheckCircle2 className="w-4 h-4 text-sentiment-positive" />}
-                            {isError && <XCircle className="w-4 h-4 text-sentiment-negative" />}
-                          </div>
-                          <Badge variant="outline" className="text-xs">
-                            {action.audience}
-                          </Badge>
+            <div className="space-y-3">
+              <h3 className="font-semibold flex items-center gap-2">
+                <Mail className="w-4 h-4 text-action-email" />
+                {t('meetingDetail.emails')} ({emailActions.length})
+              </h3>
+              {emailActions.map((action) => {
+                const isSuccess = action.status === 'sent';
+                const isError = action.status === 'error';
+                
+                return (
+                  <div 
+                    key={action.id} 
+                    className={`p-4 rounded-lg border-2 ${
+                      isSuccess ? 'bg-sentiment-positive/5 border-sentiment-positive/30' :
+                      isError ? 'bg-sentiment-negative/5 border-sentiment-negative/30' :
+                      'bg-background/50 border-border/50'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-4 mb-2">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <p className="font-semibold">{action.subject}</p>
+                          {isSuccess && <CheckCircle2 className="w-4 h-4 text-sentiment-positive" />}
+                          {isError && <XCircle className="w-4 h-4 text-sentiment-negative" />}
                         </div>
-                        <Badge variant={
-                          isSuccess ? 'default' : 
-                          isError ? 'destructive' : 
-                          'secondary'
-                        } className={
-                          isSuccess ? 'bg-sentiment-positive text-white' : ''
-                        }>
-                          {action.status === 'sent' ? t('meetingDetail.sent') : 
-                           action.status === 'error' ? t('meetingDetail.error') : 
-                           action.status}
+                        <Badge variant="outline" className="text-xs">
+                          {action.audience}
                         </Badge>
                       </div>
-                      {action.recipients && action.recipients.length > 0 && (
-                        <p className="text-sm text-muted-foreground">
-                          {t('meetingDetail.to')} {action.recipients.join(', ')}
-                        </p>
-                      )}
-                      {isSuccess && action.sent_at && (
-                        <p className="text-xs text-sentiment-positive mt-1">
-                          {t('meetingDetail.sentAt')} {new Date(action.sent_at).toLocaleString(i18n.language === 'pt' ? 'pt-PT' : 'en-US')}
-                        </p>
-                      )}
-                      {isError && action.error_message && (
-                        <p className="text-xs text-sentiment-negative mt-1">
-                          {t('meetingDetail.error')}: {action.error_message}
-                        </p>
-                      )}
+                      <Badge variant={
+                        isSuccess ? 'default' : 
+                        isError ? 'destructive' : 
+                        'secondary'
+                      } className={
+                        isSuccess ? 'bg-sentiment-positive text-white' : ''
+                      }>
+                        {action.status === 'sent' ? t('meetingDetail.sent') : 
+                         action.status === 'error' ? t('meetingDetail.error') : 
+                         action.status}
+                      </Badge>
                     </div>
-                  );
-                })}
-              </div>
-            )}
-
-            {calendarEvents.length > 0 && (
-              <div className="space-y-3">
-                <h3 className="font-semibold flex items-center gap-2">
-                  <Calendar className="w-4 h-4 text-action-calendar" />
-                  {t('meetingDetail.calendarEvents')} ({calendarEvents.length})
-                </h3>
-                {calendarEvents.map((event) => {
-                  const isSuccess = event.status === 'synced';
-                  const isError = event.status === 'error';
-                  
-                  return (
-                    <div 
-                      key={event.id}
-                      className={`p-4 rounded-lg border-2 ${
-                        isSuccess ? 'bg-sentiment-positive/5 border-sentiment-positive/30' :
-                        isError ? 'bg-sentiment-negative/5 border-sentiment-negative/30' :
-                        'bg-background/50 border-border/50'
-                      }`}
-                    >
-                      <div className="flex items-start justify-between gap-4 mb-2">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
-                            <p className="font-semibold">{event.title}</p>
-                            {isSuccess && <CheckCircle2 className="w-4 h-4 text-sentiment-positive" />}
-                            {isError && <XCircle className="w-4 h-4 text-sentiment-negative" />}
-                          </div>
-                          {event.start_time && (
-                            <p className="text-sm text-muted-foreground">
-                              {new Date(event.start_time).toLocaleString(i18n.language === 'pt' ? 'pt-PT' : 'en-US')}
-                            </p>
-                          )}
-                        </div>
-                        <Badge variant={
-                          isSuccess ? 'default' : 
-                          isError ? 'destructive' : 
-                          'secondary'
-                        } className={
-                          isSuccess ? 'bg-sentiment-positive text-white' : ''
-                        }>
-                          {event.status === 'synced' ? t('meetingDetail.created') : 
-                           event.status === 'error' ? t('meetingDetail.error') : 
-                           event.status}
-                        </Badge>
-                      </div>
-                      {event.attendees && event.attendees.length > 0 && (
-                        <p className="text-sm text-muted-foreground">
-                          {t('meetingDetail.attendees')} {event.attendees.map((a: any) => a.name || a.email).join(', ')}
-                        </p>
-                      )}
-                      {isError && event.error_message && (
-                        <p className="text-xs text-sentiment-negative mt-1">
-                          {t('meetingDetail.error')}: {event.error_message}
-                        </p>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
+                    {action.recipients && action.recipients.length > 0 && (
+                      <p className="text-sm text-muted-foreground">
+                        {t('meetingDetail.to')} {action.recipients.join(', ')}
+                      </p>
+                    )}
+                    {isSuccess && action.sent_at && (
+                      <p className="text-xs text-sentiment-positive mt-1">
+                        {t('meetingDetail.sentAt')} {new Date(action.sent_at).toLocaleString(i18n.language === 'pt' ? 'pt-PT' : 'en-US')}
+                      </p>
+                    )}
+                    {isError && action.error_message && (
+                      <p className="text-xs text-sentiment-negative mt-1">
+                        {t('meetingDetail.error')}: {action.error_message}
+                      </p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           </Card>
         )}
 

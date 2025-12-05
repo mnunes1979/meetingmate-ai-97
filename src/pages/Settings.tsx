@@ -8,15 +8,12 @@ import { useTranslation } from "react-i18next";
 import { MobileNav } from "@/components/MobileNav";
 import { LanguageSelector } from "@/components/LanguageSelector";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { GoogleCalendarSettings } from "@/components/settings/GoogleCalendarSettings";
-import { TrelloSettings } from "@/components/settings/TrelloSettings";
 import { useAuth } from "@/hooks/useAuth";
 
 const Settings = () => {
   const { t } = useTranslation();
   const [user, setUser] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
-  const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -44,14 +41,6 @@ const Settings = () => {
       .single();
 
     setProfile(profileData);
-
-    // Check if user is admin
-    const { data: roles } = await supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", user.id);
-
-    setIsAdmin(roles?.some(r => r.role === 'admin') || false);
     setLoading(false);
   };
 
@@ -62,9 +51,6 @@ const Settings = () => {
       </div>
     );
   }
-
-  // Check connection status securely without exposing tokens
-  const isGoogleConnected = profile?.google_linked;
 
   return (
     <div className="min-h-screen bg-background">
@@ -113,11 +99,11 @@ const Settings = () => {
             </p>
           </div>
 
-          {/* Google Calendar Component */}
-          <GoogleCalendarSettings />
-          
-          {/* Trello Component - Only visible to admins */}
-          {isAdmin && <TrelloSettings />}
+          <div className="p-6 rounded-lg border border-border bg-card">
+            <p className="text-muted-foreground text-center">
+              No hay integraciones externas configuradas.
+            </p>
+          </div>
         </div>
       </main>
     </div>

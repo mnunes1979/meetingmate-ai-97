@@ -9,12 +9,9 @@ import { ProcessingSteps } from "@/components/meeting/ProcessingSteps";
 import { SummaryCard } from "@/components/meeting/SummaryCard";
 import { EntitiesCard } from "@/components/meeting/EntitiesCard";
 import { EmailActionCard } from "@/components/actions/EmailActionCard";
-import { CalendarActionCard } from "@/components/actions/CalendarActionCard";
-import { TrelloActionCard } from "@/components/actions/TrelloActionCard";
 import { SalesOpportunitiesCard } from "@/components/meeting/SalesOpportunitiesCard";
 import { BusinessInsightsCard } from "@/components/meeting/BusinessInsightsCard";
 import { useToast } from "@/hooks/use-toast";
-import { useTrelloRealtime } from "@/hooks/useTrelloRealtime";
 import { Mic2, LogIn, Building2, FileText, BarChart3, Settings } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { MobileNav } from "@/components/MobileNav";
@@ -39,8 +36,6 @@ interface ProcessedMeeting {
   meeting?: { datetime_iso?: string; duration_min?: number };
   intents: any[];
   email_drafts: Array<{ audience: 'client' | 'finance' | 'tech' | 'sales' | 'support' | 'management' | 'custom'; subject: string; body_md: string; suggested_recipients?: string[]; context?: string }>;
-  calendar_events?: Array<{ title: string; description?: string; proposed_datetime_iso: string; duration_min: number; attendees: Array<{ name: string; email?: string }>; notes?: string; meeting_type?: string }>;
-  trello_tasks?: Array<{ title: string; description?: string; priority: 'low' | 'medium' | 'high'; due_date_iso?: string; assignee?: string; context?: string }>;
   risks: any[];
   sales_opportunities?: Array<{
     title: string;
@@ -84,11 +79,6 @@ const Index = () => {
   const [isAdmin, setIsAdmin] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
-
-  // Setup realtime notifications for Trello tasks
-  useTrelloRealtime({
-    showNotifications: true,
-  });
 
   // Check auth status and load user profile
   useEffect(() => {
@@ -636,19 +626,6 @@ const Index = () => {
           subject: replaceNames(draft.subject),
           body_md: replaceNames(draft.body_md),
         })),
-        // Update calendar events with replaced names
-        calendar_events: processedMeeting.calendar_events?.map(event => ({
-          ...event,
-          title: replaceNames(event.title),
-          description: event.description ? replaceNames(event.description) : undefined,
-        })),
-        // Update trello tasks with replaced names
-        trello_tasks: processedMeeting.trello_tasks?.map(task => ({
-          ...task,
-          title: replaceNames(task.title),
-          description: task.description ? replaceNames(task.description) : undefined,
-          context: task.context ? replaceNames(task.context) : undefined,
-        })),
         // Update sales opportunities with replaced names
         sales_opportunities: processedMeeting.sales_opportunities?.map(opp => ({
           ...opp,
@@ -700,141 +677,6 @@ const Index = () => {
         description: error.message,
         variant: "destructive",
       });
-    }
-  };
-
-  const handleAddToCalendar = async (eventDetails: any) => {
-    if (!currentNoteId) return;
-
-    // Check if user is authenticated
-    if (!isAuthenticated) {
-      toast({
-        title: t('calendar.loginRequired'),
-        description: t('calendar.loginRequired'),
-        variant: "destructive",
-        action: (
-          <Button size="sm" onClick={() => navigate("/auth")}>
-            {t('auth.login')}
-          </Button>
-        ),
-      });
-      return;
-    }
-
-    try {
-      // Get user's Google access token
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) {
-        navigate("/auth");
-        return;
-      }
-
-      // Check Google Calendar connection status securely (without exposing tokens)
-      const { data: tokenStatus, error: statusError } = await supabase.rpc(
-        "get_google_token_status",
-        { _user_id: user.id }
-      );
-
-      if (statusError || !tokenStatus || tokenStatus.length === 0) {
-        console.error('Error checking Google Calendar status:', statusError);
-        toast({
-          title: t('calendar.connectRequired'),
-          description: t('calendar.connectRequired'),
-        });
-        setTimeout(() => navigate("/settings"), 2000);
-        return;
-      }
-
-      const status = tokenStatus[0];
-      
-      if (!status.is_connected) {
-        toast({
-          title: t('calendar.connectRequired'),
-          description: t('calendar.connectRequired'),
-        });
-        setTimeout(() => navigate("/settings"), 2000);
-        return;
-      }
-
-      // Check if token expired and refresh if needed
-      if (status.is_expired) {
-        const { error: refreshError } = await supabase.functions.invoke(
-          "refresh-google-token",
-          { body: { userId: user.id } }
-        );
-        
-        if (refreshError) {
-          console.error('Error refreshing token:', refreshError);
-          toast({
-            title: t('calendar.connectRequired'),
-            description: t('calendar.reconnectRequired'),
-          });
-          setTimeout(() => navigate("/settings"), 2000);
-          return;
-        }
-      }
-
-      toast({
-        title: t('calendar.adding'),
-        description: t('calendar.adding'),
-      });
-
-      // Add event to Google Calendar
-      const { data, error } = await supabase.functions.invoke("add-calendar-event", {
-        body: {
-          summary: eventDetails.title,
-          description: eventDetails.description,
-          startTime: eventDetails.startTime,
-          endTime: eventDetails.endTime,
-          attendees: eventDetails.attendees,
-        },
-      });
-
-      if (error) throw error;
-
-      // Save to database
-      await supabase.from("calendar_events").insert({
-        note_id: currentNoteId,
-        user_id: user.id,
-        title: eventDetails.title,
-        description: eventDetails.description,
-        start_time: eventDetails.startTime,
-        end_time: eventDetails.endTime,
-        attendees: eventDetails.attendees,
-        status: "synced",
-        external_id: data.eventId,
-      });
-
-      toast({
-        title: t('calendar.eventAdded'),
-        description: t('calendar.eventAddedDesc'),
-      });
-    } catch (error: any) {
-      console.error("Error adding to calendar:", error);
-      toast({
-        title: t('common.error'),
-        description: error.message || t('calendar.addError'),
-        variant: "destructive",
-      });
-
-      // Save as draft in database
-      if (currentNoteId) {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          await supabase.from("calendar_events").insert({
-            user_id: user.id,
-            note_id: currentNoteId,
-            title: eventDetails.title,
-            description: eventDetails.description,
-            start_time: eventDetails.startTime,
-            end_time: eventDetails.endTime,
-            attendees: eventDetails.attendees,
-            status: "error",
-            error_message: error.message,
-          });
-        }
-      }
     }
   };
 
@@ -1028,22 +870,6 @@ const Index = () => {
                   draft={draft}
                   onCreateDraft={(recipients) => handleCreateEmailDraft(draft, recipients)}
                   onSend={(recipients) => handleSendEmail(draft, recipients)}
-                />
-              ))}
-
-              {processedMeeting.calendar_events && processedMeeting.calendar_events.map((event, index) => (
-                <CalendarActionCard
-                  key={`calendar-${index}`}
-                  event={event}
-                  onAdd={handleAddToCalendar}
-                />
-              ))}
-
-              {processedMeeting.trello_tasks && processedMeeting.trello_tasks.map((task, index) => (
-                <TrelloActionCard
-                  key={`trello-${index}`}
-                  task={task}
-                  noteId={currentNoteId || undefined}
                 />
               ))}
 

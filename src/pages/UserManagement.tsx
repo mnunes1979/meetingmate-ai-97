@@ -10,7 +10,6 @@ import { Loader2, UserPlus, Key, UserX, UserCheck } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import AdminLayout from "@/components/admin/AdminLayout";
-import { GoogleCalendarConnections } from "@/components/admin/GoogleCalendarConnections";
 import { useAuth } from "@/hooks/useAuth";
 
 interface SalesRep {
@@ -547,9 +546,6 @@ const UserManagement = () => {
             </Card>
           ))}
         </div>
-
-        {/* Google Calendar Connections */}
-        <GoogleCalendarConnections />
       </div>
     </AdminLayout>
   );
