@@ -184,18 +184,26 @@ const Index = () => {
       const fileName = `${Date.now()}-${sanitizedName}.webm`;
       const filePath = `${currentSession.user.id}/${fileName}`;
       
-      // Upload audio directly (no retry to prevent hanging)
-      console.log('[Upload] starting upload to storage', { filePath });
-      const { error: uploadError } = await supabase.storage
+      // Upload audio with timeout to prevent hanging
+      console.log('[Upload] starting upload to storage', { filePath, blobSize: audioBlob.size });
+      
+      const uploadPromise = supabase.storage
         .from('audio-recordings')
         .upload(filePath, audioBlob, {
           contentType: 'audio/webm',
           upsert: false,
         });
+      
+      // Add 60 second timeout for upload
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error('Upload timeout - please try again')), 60000);
+      });
+      
+      const { error: uploadError } = await Promise.race([uploadPromise, timeoutPromise]);
 
       if (uploadError) {
         console.error('[Upload] failed:', uploadError);
-        throw uploadError;
+        throw new Error(`Falha no upload: ${uploadError.message}`);
       }
       console.log('[Upload] success');
 
