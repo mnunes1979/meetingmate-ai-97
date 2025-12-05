@@ -2,12 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { ArrowLeft, Mail, TrendingUp, MousePointer, AlertCircle, CheckCircle, XCircle } from "lucide-react";
-import { NavLink } from "@/components/NavLink";
-import { ThemeToggle } from "@/components/ThemeToggle";
-import { LanguageSelector } from "@/components/LanguageSelector";
-import { MobileNav } from "@/components/MobileNav";
+import { Mail, TrendingUp, MousePointer, AlertCircle, CheckCircle, XCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from "react-i18next";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -18,6 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import AdminLayout from "@/components/admin/AdminLayout";
 
 interface EmailStats {
   total_sent: number;
@@ -50,7 +46,7 @@ export default function EmailAnalytics() {
   const [timeRange, setTimeRange] = useState<string>("7");
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
 
   useEffect(() => {
     checkAuthAndLoad();
@@ -217,38 +213,8 @@ export default function EmailAnalytics() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b border-border/50 backdrop-blur-sm sticky top-0 z-10 bg-background/80">
-        <div className="container mx-auto px-4 py-3 md:py-4">
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <MobileNav userEmail={user?.email} />
-              <Button variant="ghost" size="icon" asChild className="hidden md:flex">
-                <NavLink to="/">
-                  <ArrowLeft className="w-5 h-5" />
-                </NavLink>
-              </Button>
-              <div>
-                <h1 className="text-lg md:text-2xl font-bold">{t('analytics.title')}</h1>
-                <p className="text-xs md:text-sm text-muted-foreground hidden sm:block">
-                  {t('analytics.subtitle')}
-                </p>
-              </div>
-            </div>
-            <div className="hidden md:flex items-center gap-2">
-              <ThemeToggle />
-              <LanguageSelector />
-            </div>
-            <div className="md:hidden">
-              <ThemeToggle />
-            </div>
-          </div>
-        </div>
-      </header>
-
-      {/* Main content */}
-      <main className="container mx-auto px-3 sm:px-4 py-4 sm:py-8 max-w-7xl space-y-4 sm:space-y-6">
+    <AdminLayout title={t('analytics.title')}>
+      <div className="space-y-4 sm:space-y-6">
         {/* Time Range Selector */}
         <div className="flex justify-end">
           <Select value={timeRange} onValueChange={setTimeRange}>
@@ -413,7 +379,7 @@ export default function EmailAnalytics() {
             </Card>
           </>
         ) : null}
-      </main>
-    </div>
+      </div>
+    </AdminLayout>
   );
 }
