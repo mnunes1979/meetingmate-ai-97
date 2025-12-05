@@ -12,11 +12,46 @@ const corsHeaders = {
 // OpenAI Whisper file size limit (25MB)
 const MAX_CHUNK_SIZE = 24 * 1024 * 1024; // 24MB to be safe
 
-// Input validation schema - now accepts storage path instead of base64
+// Input validation schema
 const transcribeSchema = z.object({
   storagePath: z.string().min(1, "Storage path required"),
   mime: z.string().min(3).max(100).optional(),
+  useDiarization: z.boolean().optional().default(false), // For meeting notes with speaker identification
 });
+
+// Speaker utterance from Deepgram
+interface DeepgramWord {
+  word: string;
+  start: number;
+  end: number;
+  confidence: number;
+  speaker?: number;
+}
+
+interface DeepgramUtterance {
+  transcript: string;
+  confidence: number;
+  words: DeepgramWord[];
+  speaker: number;
+  start: number;
+  end: number;
+}
+
+interface DeepgramResponse {
+  results?: {
+    channels?: Array<{
+      alternatives?: Array<{
+        transcript?: string;
+        confidence?: number;
+        words?: DeepgramWord[];
+      }>;
+    }>;
+    utterances?: DeepgramUtterance[];
+  };
+  metadata?: {
+    detected_language?: string;
+  };
+}
 
 // Normalize language codes to ISO 639-1 format
 function normalizeLanguageCode(language: string | undefined): string {
@@ -24,7 +59,6 @@ function normalizeLanguageCode(language: string | undefined): string {
   
   const langLower = language.toLowerCase();
   
-  // Map common language names/codes to ISO 639-1
   const languageMap: Record<string, string> = {
     'portuguese': 'pt',
     'pt': 'pt',
@@ -48,7 +82,7 @@ function normalizeLanguageCode(language: string | undefined): string {
   return languageMap[langLower] || 'pt';
 }
 
-// Split audio into chunks if larger than 25MB
+// Split audio into chunks if larger than 25MB (for Whisper)
 async function splitAudioIntoChunks(audioData: Uint8Array, mimeType: string): Promise<Blob[]> {
   const totalSize = audioData.length;
   
@@ -78,41 +112,135 @@ async function splitAudioIntoChunks(audioData: Uint8Array, mimeType: string): Pr
   return chunks;
 }
 
-// Transcribe a single audio chunk
-async function transcribeChunk(
-  chunk: Blob, 
-  openaiKey: string, 
-  chunkIndex: number
+// Transcribe using OpenAI Whisper (for voice notes without diarization)
+async function transcribeWithWhisper(
+  audioData: Uint8Array, 
+  mimeType: string,
+  openaiKey: string
 ): Promise<{ text: string; language: string }> {
-  const formData = new FormData();
-  const extension = chunk.type.includes('wav') ? 'wav' : 'webm';
-  formData.append('file', chunk, `audio_chunk_${chunkIndex}.${extension}`);
-  formData.append('model', 'whisper-1');
-  formData.append('language', 'pt'); // Default to Portuguese
-  formData.append('response_format', 'verbose_json');
+  const chunks = await splitAudioIntoChunks(audioData, mimeType);
+  const transcriptions: string[] = [];
+  let detectedLanguage = 'pt';
   
-  console.log(`[Transcribe] Sending chunk ${chunkIndex} to OpenAI, size: ${chunk.size} bytes`);
+  for (let i = 0; i < chunks.length; i++) {
+    const formData = new FormData();
+    const extension = mimeType.includes('wav') ? 'wav' : 'webm';
+    formData.append('file', chunks[i], `audio_chunk_${i}.${extension}`);
+    formData.append('model', 'whisper-1');
+    formData.append('language', 'pt');
+    formData.append('response_format', 'verbose_json');
+    
+    console.log(`[Whisper] Sending chunk ${i} to OpenAI, size: ${chunks[i].size} bytes`);
+    
+    const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${openaiKey}`,
+      },
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`[Whisper] OpenAI API error for chunk ${i}:`, response.status, errorText);
+      throw new Error(`Transcription failed for chunk ${i}: ${errorText}`);
+    }
+
+    const result = await response.json();
+    console.log(`[Whisper] Chunk ${i} transcribed, text length: ${result.text?.length}`);
+    
+    transcriptions.push(result.text || '');
+    if (i === 0) {
+      detectedLanguage = result.language || 'pt';
+    }
+  }
   
-  const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+  return {
+    text: transcriptions.join(' '),
+    language: normalizeLanguageCode(detectedLanguage),
+  };
+}
+
+// Transcribe using Deepgram with speaker diarization (for meeting notes)
+async function transcribeWithDeepgram(
+  audioData: Uint8Array,
+  mimeType: string,
+  deepgramKey: string
+): Promise<{ text: string; language: string; speakers?: Array<{ speaker: number; text: string; start: number; end: number }> }> {
+  console.log('[Deepgram] Starting transcription with diarization, size:', audioData.length, 'bytes');
+  
+  // Deepgram API with diarization enabled
+  const url = new URL('https://api.deepgram.com/v1/listen');
+  url.searchParams.set('model', 'nova-2');
+  url.searchParams.set('language', 'pt');
+  url.searchParams.set('smart_format', 'true');
+  url.searchParams.set('punctuate', 'true');
+  url.searchParams.set('diarize', 'true'); // Enable speaker diarization
+  url.searchParams.set('utterances', 'true'); // Get utterances grouped by speaker
+  url.searchParams.set('detect_language', 'true');
+  
+  // Create a Blob for fetch body - cast to avoid TypeScript issues
+  const audioBlob = new Blob([audioData as unknown as ArrayBuffer], { type: mimeType || 'audio/webm' });
+  
+  const response = await fetch(url.toString(), {
     method: 'POST',
     headers: {
-      'Authorization': `Bearer ${openaiKey}`,
+      'Authorization': `Token ${deepgramKey}`,
+      'Content-Type': mimeType || 'audio/webm',
     },
-    body: formData,
+    body: audioBlob,
   });
 
   if (!response.ok) {
     const errorText = await response.text();
-    console.error(`[Transcribe] OpenAI API error for chunk ${chunkIndex}:`, response.status, errorText);
-    throw new Error(`Transcription failed for chunk ${chunkIndex}: ${errorText}`);
+    console.error('[Deepgram] API error:', response.status, errorText);
+    throw new Error(`Deepgram transcription failed: ${errorText}`);
   }
 
-  const result = await response.json();
-  console.log(`[Transcribe] Chunk ${chunkIndex} transcribed, text length: ${result.text?.length}`);
+  const result: DeepgramResponse = await response.json();
+  console.log('[Deepgram] Response received');
+  
+  // Extract detected language
+  const detectedLanguage = result.metadata?.detected_language || 'pt';
+  console.log('[Deepgram] Detected language:', detectedLanguage);
+  
+  // Process utterances with speaker information
+  const utterances = result.results?.utterances || [];
+  const speakers: Array<{ speaker: number; text: string; start: number; end: number }> = [];
+  
+  if (utterances.length > 0) {
+    console.log('[Deepgram] Processing', utterances.length, 'utterances');
+    
+    for (const utterance of utterances) {
+      speakers.push({
+        speaker: utterance.speaker,
+        text: utterance.transcript,
+        start: utterance.start,
+        end: utterance.end,
+      });
+    }
+    
+    // Format transcript with speaker labels
+    const formattedTranscript = speakers
+      .map(s => `[Orador ${s.speaker + 1}]: ${s.text}`)
+      .join('\n\n');
+    
+    console.log('[Deepgram] Formatted transcript with', new Set(speakers.map(s => s.speaker)).size, 'speakers');
+    
+    return {
+      text: formattedTranscript,
+      language: normalizeLanguageCode(detectedLanguage),
+      speakers,
+    };
+  }
+  
+  // Fallback to basic transcript if no utterances
+  const basicTranscript = result.results?.channels?.[0]?.alternatives?.[0]?.transcript || '';
+  console.log('[Deepgram] No utterances, using basic transcript, length:', basicTranscript.length);
   
   return {
-    text: result.text || '',
-    language: result.language || 'pt',
+    text: basicTranscript,
+    language: normalizeLanguageCode(detectedLanguage),
   };
 }
 
@@ -185,11 +313,10 @@ serve(async (req) => {
     console.log('Request data received, validating...');
     
     const validatedData = transcribeSchema.parse(requestData);
-    const { storagePath, mime } = validatedData;
+    const { storagePath, mime, useDiarization } = validatedData;
     console.log(`Storage path: ${storagePath}`);
     console.log(`Mime type: ${mime || 'not provided'}`);
-
-    console.log('Processing audio transcription for user:', user.id);
+    console.log(`Use diarization: ${useDiarization}`);
 
     // Download audio from storage
     console.log('Downloading audio from storage...');
@@ -205,76 +332,75 @@ serve(async (req) => {
     const binaryAudio = new Uint8Array(await audioData.arrayBuffer());
     console.log(`Audio downloaded: ${binaryAudio.length} bytes`);
     
-    // Validate audio size (minimum 1KB for reasonable audio)
+    // Validate audio size
     if (binaryAudio.length < 1000) {
       console.error('Audio too small:', binaryAudio.length, 'bytes');
       throw new Error('Audio file is too small or corrupted. Please record at least 3 seconds of clear audio.');
     }
     
-    // Get OpenAI key from database or environment
-    const openaiKey = await getApiKey('OPENAI_API_KEY');
-    if (!openaiKey) {
-      console.error('OPENAI_API_KEY not configured');
-      throw new Error('OpenAI API key não configurada. Configure em API Keys.');
-    }
-    
     const audioMimeType = mime || 'audio/webm';
+    let transcriptionResult: { text: string; language: string; speakers?: Array<{ speaker: number; text: string; start: number; end: number }> };
     
-    // Split into chunks if necessary
-    const chunks = await splitAudioIntoChunks(binaryAudio, audioMimeType);
-    
-    // Transcribe all chunks
-    const transcriptions: string[] = [];
-    let detectedLanguage = 'pt';
-    
-    for (let i = 0; i < chunks.length; i++) {
-      const result = await transcribeChunk(chunks[i], openaiKey, i);
-      transcriptions.push(result.text);
-      if (i === 0) {
-        detectedLanguage = result.language; // Use language from first chunk
+    if (useDiarization) {
+      // Use Deepgram for meeting notes with speaker diarization
+      const deepgramKey = Deno.env.get('DEEPGRAM_API_KEY');
+      if (!deepgramKey) {
+        console.error('DEEPGRAM_API_KEY not configured');
+        throw new Error('Deepgram API key não configurada. Configure em API Keys.');
       }
+      
+      transcriptionResult = await transcribeWithDeepgram(binaryAudio, audioMimeType, deepgramKey);
+    } else {
+      // Use OpenAI Whisper for voice notes (no diarization needed)
+      const openaiKey = await getApiKey('OPENAI_API_KEY');
+      if (!openaiKey) {
+        console.error('OPENAI_API_KEY not configured');
+        throw new Error('OpenAI API key não configurada. Configure em API Keys.');
+      }
+      
+      transcriptionResult = await transcribeWithWhisper(binaryAudio, audioMimeType, openaiKey);
     }
-    
-    // Combine all transcriptions
-    const fullTranscript = transcriptions.join(' ');
     
     // Validate transcription result
-    if (!fullTranscript || fullTranscript.trim().length === 0) {
-      console.error('Empty transcription result from OpenAI');
+    if (!transcriptionResult.text || transcriptionResult.text.trim().length === 0) {
+      console.error('Empty transcription result');
       throw new Error('No speech detected in audio. Please ensure you speak clearly during recording.');
     }
-    
-    // Normalize language code to ISO 639-1 format
-    const normalizedLanguage = normalizeLanguageCode(detectedLanguage);
     
     // Log rate limit
     await supabaseAdmin.from('rate_limits').insert({
       user_id: user.id,
       action: 'transcribe',
-      metadata: { chunks: chunks.length, audioSize: binaryAudio.length },
+      metadata: { 
+        useDiarization,
+        audioSize: binaryAudio.length,
+        speakersDetected: transcriptionResult.speakers ? new Set(transcriptionResult.speakers.map(s => s.speaker)).size : 0,
+      },
     });
     
     console.log('Transcription successful:', {
-      originalLanguage: detectedLanguage,
-      normalizedLanguage: normalizedLanguage,
-      textLength: fullTranscript.length,
-      chunks: chunks.length,
+      language: transcriptionResult.language,
+      textLength: transcriptionResult.text.length,
+      useDiarization,
+      speakersDetected: transcriptionResult.speakers?.length || 0,
     });
 
     return new Response(
       JSON.stringify({ 
-        text: fullTranscript,
-        language: normalizedLanguage,
-        confidence: 0.95 
+        text: transcriptionResult.text,
+        language: transcriptionResult.language,
+        confidence: 0.95,
+        speakers: transcriptionResult.speakers,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
-  } catch (error: any) {
-    if (error instanceof z.ZodError) {
-      console.error('Validation error:', error.errors);
+  } catch (error: unknown) {
+    const err = error as Error & { errors?: unknown[] };
+    if (err.errors) {
+      console.error('Validation error:', err.errors);
       return new Response(
-        JSON.stringify({ error: 'Invalid input', details: error.errors }),
+        JSON.stringify({ error: 'Invalid input', details: err.errors }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -283,7 +409,7 @@ serve(async (req) => {
     
     // Determine appropriate status code
     let status = 500;
-    let errorMessage = error.message || 'Internal server error';
+    let errorMessage = err.message || 'Internal server error';
     
     if (errorMessage.includes('Rate limit') || errorMessage.includes('429')) {
       status = 429;

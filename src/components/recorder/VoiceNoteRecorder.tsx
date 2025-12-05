@@ -9,7 +9,7 @@ import { AudioUploader } from "./AudioUploader";
 import logger from "@/lib/logger";
 
 interface VoiceNoteRecorderProps {
-  onRecordingComplete: (audioBlob: Blob) => void;
+  onRecordingComplete: (audioBlob: Blob, useDiarization: boolean) => void;
   isProcessing: boolean;
 }
 
@@ -233,13 +233,13 @@ export const VoiceNoteRecorder = ({ onRecordingComplete, isProcessing }: VoiceNo
 
   const handleProcess = () => {
     if (audioBlob) {
-      onRecordingComplete(audioBlob);
+      onRecordingComplete(audioBlob, false); // Voice notes do NOT use diarization
     }
   };
 
   const handleFileUpload = (file: File) => {
     const blob = new Blob([file], { type: file.type });
-    onRecordingComplete(blob);
+    onRecordingComplete(blob, false); // Uploaded voice notes do NOT use diarization
   };
 
   const formatTime = (seconds: number) => {

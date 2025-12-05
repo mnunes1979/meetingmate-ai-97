@@ -171,8 +171,8 @@ const Index = () => {
   }, []);
 
 
-  const handleRecordingComplete = async (audioBlob: Blob) => {
-    logger.log('[handleRecordingComplete] START - audioBlob size:', audioBlob.size, 'type:', audioBlob.type);
+  const handleRecordingComplete = async (audioBlob: Blob, useDiarization: boolean = false) => {
+    logger.log('[handleRecordingComplete] START - audioBlob size:', audioBlob.size, 'type:', audioBlob.type, 'useDiarization:', useDiarization);
     try {
       setProcessingStep('upload');
       logger.log('[handleRecordingComplete] Processing step set to upload');
@@ -270,13 +270,13 @@ const Index = () => {
         throw new Error(t('errors.authRequired', 'Autenticação necessária para transcrever. Inicie sessão.'));
       }
 
-      // Call transcription function with storage path (no base64 encoding needed!)
-      logger.log('[Transcribe] Calling edge function with storage path:', filePath);
+      // Call transcription function with storage path and diarization flag
+      logger.log('[Transcribe] Calling edge function with storage path:', filePath, 'useDiarization:', useDiarization);
       const transcriptData = await retryWithBackoff(
         async (signal) => {
           const { data, error } = await supabase.functions.invoke('transcribe-audio', {
             headers: { Authorization: `Bearer ${accessToken}` },
-            body: { storagePath: filePath, mime: mimeType },
+            body: { storagePath: filePath, mime: mimeType, useDiarization },
           });
 
           if (error) {
