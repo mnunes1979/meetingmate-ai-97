@@ -52,7 +52,7 @@ export const SalesOpportunitiesCard = ({ opportunities }: SalesOpportunitiesCard
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-lg">
           <TrendingUp className="h-5 w-5 text-primary" />
-          Oportunitats de Venda
+          Oportunidades de Venda
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -66,21 +66,21 @@ export const SalesOpportunitiesCard = ({ opportunities }: SalesOpportunitiesCard
             <div className="flex flex-wrap gap-2">
               <Badge variant="outline" className={getValueColor(opportunity.estimated_value)}>
                 <DollarSign className="h-3 w-3 mr-1" />
-                Valor: {opportunity.estimated_value === "high" ? "Alt" : opportunity.estimated_value === "medium" ? "Mitjà" : "Baix"}
+                Valor: {opportunity.estimated_value === "high" ? "Alto" : opportunity.estimated_value === "medium" ? "Médio" : "Baixo"}
               </Badge>
               <Badge variant="outline" className={getUrgencyColor(opportunity.urgency)}>
                 <Clock className="h-3 w-3 mr-1" />
-                Urgència: {opportunity.urgency === "high" ? "Alta" : opportunity.urgency === "medium" ? "Mitjana" : "Baixa"}
+                Urgência: {opportunity.urgency === "high" ? "Alta" : opportunity.urgency === "medium" ? "Média" : "Baixa"}
               </Badge>
               <Badge variant="outline" className={getProbabilityColor(opportunity.probability)}>
                 <Target className="h-3 w-3 mr-1" />
-                Probabilitat: {opportunity.probability === "high" ? "Alta" : opportunity.probability === "medium" ? "Mitjana" : "Baixa"}
+                Probabilidade: {opportunity.probability === "high" ? "Alta" : opportunity.probability === "medium" ? "Média" : "Baixa"}
               </Badge>
             </div>
 
             <div className="space-y-2 text-sm">
               <div>
-                <span className="font-medium text-foreground">Producte/Servei: </span>
+                <span className="font-medium text-foreground">Produto/Serviço: </span>
                 <span className="text-muted-foreground">{opportunity.product_service}</span>
               </div>
               <div>
@@ -88,7 +88,7 @@ export const SalesOpportunitiesCard = ({ opportunities }: SalesOpportunitiesCard
                 <span className="text-muted-foreground">{opportunity.trigger}</span>
               </div>
               <div className="p-3 bg-primary/5 rounded-md border border-primary/10">
-                <span className="font-medium text-foreground">Acció Recomanada: </span>
+                <span className="font-medium text-foreground">Ação Recomendada: </span>
                 <span className="text-muted-foreground">{opportunity.recommended_action}</span>
               </div>
             </div>

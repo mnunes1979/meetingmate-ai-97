@@ -693,14 +693,14 @@ const Index = () => {
             </div>
             <h1 className="text-3xl sm:text-4xl font-bold tracking-tight">AfterMeeting</h1>
             <p className="text-base sm:text-lg text-muted-foreground px-4">
-              Assistent de notes de reunió amb intel·ligència artificial
+              Assistente de notas de reunião com inteligência artificial
             </p>
           </div>
 
           <div className="space-y-4 px-4">
             <Button size="lg" className="w-full" onClick={() => navigate("/auth")}>
               <LogIn className="w-4 h-4 mr-2" />
-              Iniciar Sessió
+              Iniciar Sessão
             </Button>
           </div>
         </div>

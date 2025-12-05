@@ -53,11 +53,11 @@ export const SummaryCard = ({ summary, sentiment, language, confidence }: Summar
   };
 
   const languageNames: Record<string, string> = {
-    pt: 'Portuguès',
-    es: 'Espanyol',
-    ca: 'Català',
-    fr: 'Francès',
-    en: 'Anglès',
+    pt: 'Português',
+    es: 'Espanhol',
+    ca: 'Catalão',
+    fr: 'Francês',
+    en: 'Inglês',
   };
 
   const getSentimentLabel = () => {

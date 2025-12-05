@@ -88,8 +88,8 @@ const Admin = () => {
       setNotes(data || []);
     } catch (error: any) {
       toast({
-        title: "Error",
-        description: "Error al carregar les notes",
+        title: "Erro",
+        description: "Erro ao carregar as notas",
         variant: "destructive",
       });
     }
@@ -135,10 +135,10 @@ const Admin = () => {
       <div className="max-w-6xl mx-auto">
         <div className="mb-4 sm:mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <h2 className="text-lg sm:text-xl font-semibold">
-            Notes de Reunions ({notes.length})
+            Notas de Reuniões ({notes.length})
           </h2>
           <Button onClick={loadNotes} variant="outline" size="sm">
-            Actualitzar
+            Atualizar
           </Button>
         </div>
 
@@ -146,7 +146,7 @@ const Admin = () => {
           {notes.length === 0 ? (
             <Card className="p-6 sm:p-8 text-center">
               <p className="text-sm sm:text-base text-muted-foreground">
-                Encara no hi ha notes de reunió
+                Ainda não existem notas de reunião
               </p>
             </Card>
           ) : (
