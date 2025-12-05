@@ -41,6 +41,9 @@
     "audioNotAvailable": "Error: audio not available. Please record again.",
     "consentLabel": "I declare that I have the consent of all participants to record and process this meeting, in compliance with GDPR.",
     "consentRequired": "Please confirm consent before recording",
+    "consentRequiredDesc": "Please confirm consent before processing.",
+    "recordTab": "Record",
+    "uploadTab": "Upload",
     "recording": "Recording...",
     "stopRecording": "Stop Recording",
     "retake": "Retake",
@@ -418,5 +421,22 @@
     "serviceUpdated": "Service updated successfully",
     "serviceUpdateError": "Failed to update service: {{message}}",
     "loading": "Loading..."
+  },
+  "voiceNote": {
+    "title": "Voice Note - Summary",
+    "subtitle": "Record or upload a personal voice note",
+    "record": "Record",
+    "upload": "Upload"
+  },
+  "upload": {
+    "invalidFormat": "Invalid format",
+    "acceptedFormats": "Accepted formats: MP3, WAV, WEBM, OGG, M4A",
+    "fileTooLarge": "File too large",
+    "maxSize": "Maximum size: 100MB",
+    "fileTooSmall": "File too small",
+    "minDuration": "The file appears to be empty or corrupted",
+    "dragDrop": "Drag an audio file",
+    "orBrowse": "or click to browse",
+    "process": "Process"
   }
 }

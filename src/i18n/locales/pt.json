@@ -49,7 +49,10 @@
     "audioTooShort": "Áudio demasiado curto. Por favor, grave pelo menos 5 segundos com voz clara.",
     "audioNotAvailable": "Erro: áudio não disponível. Por favor, grave novamente.",
     "consentLabel": "Declaro que tenho o consentimento de todos os participantes para gravar e processar esta reunião, em conformidade com o RGPD.",
-    "consentRequired": "Por favor, confirme o consentimento antes de gravar"
+    "consentRequired": "Por favor, confirme o consentimento antes de gravar",
+    "consentRequiredDesc": "Por favor, confirme o consentimento antes de processar.",
+    "recordTab": "Gravar",
+    "uploadTab": "Carregar"
   },
   "processing": {
     "uploading": "A carregar áudio...",
@@ -417,5 +420,22 @@
     "importSuccess": "Serviços importados com sucesso",
     "extractFailed": "Falha ao extrair dados dos serviços",
     "backToAll": "Voltar a Todas as Renovações"
+  },
+  "voiceNote": {
+    "title": "Nota de Voz - Resumo",
+    "subtitle": "Grave ou carregue uma nota de voz pessoal",
+    "record": "Gravar",
+    "upload": "Carregar"
+  },
+  "upload": {
+    "invalidFormat": "Formato inválido",
+    "acceptedFormats": "Formatos aceites: MP3, WAV, WEBM, OGG, M4A",
+    "fileTooLarge": "Ficheiro demasiado grande",
+    "maxSize": "Tamanho máximo: 100MB",
+    "fileTooSmall": "Ficheiro demasiado pequeno",
+    "minDuration": "O ficheiro parece estar vazio ou corrompido",
+    "dragDrop": "Arraste um ficheiro de áudio",
+    "orBrowse": "ou clique para procurar",
+    "process": "Processar"
   }
 }
