@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { NavLink } from "@/components/NavLink";
 import {
@@ -12,14 +12,21 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { Home, FileText, BarChart3, Building2, Users, Shield, Key, Server, FolderOpen } from "lucide-react";
+import { Home, FileText, BarChart3, Building2, Users, Shield, Key, Server, FolderOpen, Mic2, CheckSquare } from "lucide-react";
 import { useUserAccess } from "@/hooks/useUserAccess";
+import { supabase } from "@/integrations/supabase/client";
 
-const items = [
+const userItems = [
+  { title: "Gravar", url: "/", icon: Mic2 },
+  { title: "As Minhas Reuniões", url: "/my-meetings", icon: FileText },
+  { title: "Tarefas", url: "/tasks", icon: CheckSquare },
   { title: "Dashboard", url: "/dashboard", icon: Home },
+  { title: "Analítica de Email", url: "/email-analytics", icon: BarChart3 },
+];
+
+const adminItems = [
   { title: "Reuniões", url: "/admin", icon: FileText },
   { title: "Gestão Reuniões", url: "/admin/meetings", icon: FolderOpen },
-  { title: "Analítica de Email", url: "/email-analytics", icon: BarChart3 },
   { title: "Departamentos", url: "/departments", icon: Building2 },
   { title: "Utilizadores", url: "/admin/users", icon: Users },
   { title: "Logs de Segurança", url: "/admin/audit-logs", icon: Shield },
@@ -32,20 +39,43 @@ export function AppSidebar() {
   const location = useLocation();
   const currentPath = location.pathname;
   const { accessType, loading } = useUserAccess();
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    const checkAdmin = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: roleData } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', user.id)
+          .eq('role', 'admin')
+          .maybeSingle();
+        setIsAdmin(!!roleData);
+      }
+    };
+    checkAdmin();
+  }, []);
 
   // Filter items based on access type
-  const filteredItems = useMemo(() => {
-    if (loading) return items;
+  const filteredUserItems = useMemo(() => {
+    if (loading) return userItems;
     
     // For renewals_only users, show only renewals-related items
     if (accessType === 'renewals_only') {
       return [];
     }
     
-    return items;
+    return userItems;
   }, [accessType, loading]);
 
-  const groups = useMemo(() => [{ label: "Admin", entries: filteredItems }], [filteredItems]);
+  const groups = useMemo(() => {
+    const result = [{ label: "Menu", entries: filteredUserItems }];
+    if (isAdmin) {
+      result.push({ label: "Admin", entries: adminItems });
+    }
+    return result;
+  }, [filteredUserItems, isAdmin]);
 
   return (
     <Sidebar 
