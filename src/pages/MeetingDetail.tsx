@@ -7,6 +7,9 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Loader2, Calendar, Clock, User, Building2, TrendingUp, TrendingDown, AlertTriangle, Lightbulb, Mail, CheckCircle2, XCircle, Sparkles, ListTodo } from "lucide-react";
 import { FollowUpEmailDialog } from "@/components/meeting/FollowUpEmailDialog";
+import { MeetingKanban } from "@/components/meeting/MeetingKanban";
+import { MeetingComments } from "@/components/meeting/MeetingComments";
+import { NotificationBadge } from "@/components/NotificationBadge";
 import { Separator } from "@/components/ui/separator";
 import { NavLink } from "@/components/NavLink";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -226,10 +229,12 @@ const MeetingDetail = () => {
               </div>
             </div>
             <div className="hidden md:flex items-center gap-2">
+              <NotificationBadge />
               <ThemeToggle />
               <LanguageSelector />
             </div>
-            <div className="md:hidden">
+            <div className="md:hidden flex items-center gap-1">
+              <NotificationBadge />
               <ThemeToggle />
             </div>
           </div>
@@ -693,6 +698,19 @@ const MeetingDetail = () => {
             </Button>
           </div>
         </Card>
+
+        {/* Kanban - Plano de Ação */}
+        <MeetingKanban 
+          meetingId={meeting.id} 
+          actionItems={actionItems} 
+          userId={user?.id} 
+        />
+
+        {/* Comments */}
+        <MeetingComments 
+          meetingId={meeting.id} 
+          userId={user?.id} 
+        />
 
         <FollowUpEmailDialog
           meetingId={meeting.id}

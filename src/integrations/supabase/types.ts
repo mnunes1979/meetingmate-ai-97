@@ -490,6 +490,44 @@ export type Database = {
           },
         ]
       }
+      meeting_comments: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          meeting_id: string
+          mentions: string[] | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          meeting_id: string
+          mentions?: string[] | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          meeting_id?: string
+          mentions?: string[] | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meeting_comments_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: false
+            referencedRelation: "meeting_notes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       meeting_notes: {
         Row: {
           action_items: Json | null
@@ -579,6 +617,42 @@ export type Database = {
           },
         ]
       }
+      notifications: {
+        Row: {
+          created_at: string
+          id: string
+          message: string | null
+          read_at: string | null
+          reference_id: string | null
+          reference_type: string | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          message?: string | null
+          read_at?: string | null
+          reference_id?: string | null
+          reference_type?: string | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          message?: string | null
+          read_at?: string | null
+          reference_id?: string | null
+          reference_type?: string | null
+          title?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       oauth_states: {
         Row: {
           code_verifier: string
@@ -614,6 +688,7 @@ export type Database = {
           access_type: Database["public"]["Enums"]["access_type"]
           active: boolean
           allowed_email_domains: Json | null
+          avatar_url: string | null
           created_at: string
           department_id: string | null
           digest_email: string | null
@@ -627,6 +702,7 @@ export type Database = {
           google_refresh_token: string | null
           google_token_expires_at: string | null
           id: string
+          job_title: string | null
           name: string | null
           resend_webhook_secret: string | null
           retention_days: number | null
@@ -644,6 +720,7 @@ export type Database = {
           access_type?: Database["public"]["Enums"]["access_type"]
           active?: boolean
           allowed_email_domains?: Json | null
+          avatar_url?: string | null
           created_at?: string
           department_id?: string | null
           digest_email?: string | null
@@ -657,6 +734,7 @@ export type Database = {
           google_refresh_token?: string | null
           google_token_expires_at?: string | null
           id: string
+          job_title?: string | null
           name?: string | null
           resend_webhook_secret?: string | null
           retention_days?: number | null
@@ -674,6 +752,7 @@ export type Database = {
           access_type?: Database["public"]["Enums"]["access_type"]
           active?: boolean
           allowed_email_domains?: Json | null
+          avatar_url?: string | null
           created_at?: string
           department_id?: string | null
           digest_email?: string | null
@@ -687,6 +766,7 @@ export type Database = {
           google_refresh_token?: string | null
           google_token_expires_at?: string | null
           id?: string
+          job_title?: string | null
           name?: string | null
           resend_webhook_secret?: string | null
           retention_days?: number | null

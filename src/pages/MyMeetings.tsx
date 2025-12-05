@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, FileText, Calendar, User, LogOut, Mic2, BarChart3, Settings as SettingsIcon, Target, AlertTriangle, CheckSquare, ListTodo, AlertCircle } from "lucide-react";
+import { NotificationBadge } from "@/components/NotificationBadge";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { LanguageSelector } from "@/components/LanguageSelector";
 import { MobileNav } from "@/components/MobileNav";
@@ -195,6 +196,7 @@ const MyMeetings = () => {
                 <SettingsIcon className="w-4 h-4 mr-2" />
                 Definições
               </Button>
+              <NotificationBadge />
               <ThemeToggle />
               <LanguageSelector />
               <Button variant="ghost" size="icon" onClick={handleSignOut} title="Terminar Sessão">
