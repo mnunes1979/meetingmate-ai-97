@@ -1,8 +1,7 @@
-import { ReactNode, useCallback } from "react";
+import { ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { LanguageSelector } from "@/components/LanguageSelector";
 import { Button } from "@/components/ui/button";
 import { Mic2, LogOut } from "lucide-react";
 import { AppSidebar } from "./AppSidebar";
@@ -31,8 +30,7 @@ export default function AdminLayout({ title, children }: AdminLayoutProps) {
               </div>
               <div className="flex items-center gap-2">
                 <ThemeToggle />
-                <LanguageSelector />
-                <Button variant="ghost" size="sm" onClick={() => navigate("/")}> 
+                <Button variant="ghost" size="sm" onClick={() => navigate("/")}>
                   <Mic2 className="w-4 h-4 mr-2" />
                   Gravar
                 </Button>
