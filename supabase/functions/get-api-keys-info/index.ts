@@ -11,50 +11,28 @@ const API_KEYS_REGISTRY = [
   {
     name: "OPENAI_API_KEY",
     service: "OpenAI",
-    description: "OpenAI API key for AI transcription and meeting analysis",
+    description: "Chave API OpenAI para transcrição e análise de reuniões",
     validationEndpoint: "https://api.openai.com/v1/models",
     category: "AI Services"
   },
   {
-    name: "GOOGLE_CALENDAR_CLIENT_ID",
-    service: "Google Calendar",
-    description: "Google OAuth Client ID for calendar integration",
-    validationEndpoint: null, // OAuth credentials don't have simple validation
-    category: "Calendar Integration"
-  },
-  {
-    name: "GOOGLE_CALENDAR_CLIENT_SECRET",
-    service: "Google Calendar",
-    description: "Google OAuth Client Secret for calendar integration",
-    validationEndpoint: null,
-    category: "Calendar Integration"
-  },
-  {
     name: "RESEND_API_KEY",
     service: "Resend",
-    description: "Resend API key for email delivery",
+    description: "Chave API Resend para envio de emails",
     validationEndpoint: "https://api.resend.com/emails",
     category: "Email Services"
   },
   {
     name: "RESEND_FROM",
     service: "Resend",
-    description: "Default sender email address for Resend",
+    description: "Email de remetente padrão para Resend",
     validationEndpoint: null,
     category: "Email Services"
   },
   {
-    name: "LOVABLE_API_KEY",
-    service: "Lovable AI",
-    description: "Lovable AI Gateway API key (auto-configured)",
-    validationEndpoint: "https://ai.gateway.lovable.dev/v1/models",
-    category: "AI Services",
-    readonly: true // Cannot be edited by users
-  },
-  {
     name: "RESEND_WEBHOOK_SECRET",
     service: "Resend",
-    description: "Webhook secret for Resend event validation",
+    description: "Webhook secret para validação de eventos Resend",
     validationEndpoint: null,
     category: "Email Services"
   }
@@ -136,9 +114,9 @@ const handler = async (req: Request): Promise<Response> => {
         description: keyConfig.description,
         category: keyConfig.category,
         exists,
-        maskedValue: exists ? maskedValue : 'Not configured',
+        maskedValue: exists ? maskedValue : 'Não configurado',
         canValidate: !!keyConfig.validationEndpoint,
-        readonly: keyConfig.readonly || false
+        readonly: false
       };
     });
 
