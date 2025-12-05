@@ -78,74 +78,66 @@ serve(async (req) => {
 
     console.log('Processing meeting for user:', user.id);
 
-    const systemPrompt = `You are a precise sales-ops analyst. Analyze the meeting transcript comprehensively and return a JSON object with:
+    const systemPrompt = `You are a precise sales-ops analyst specializing in multilingual meeting analysis.
 
-- language: ALWAYS "ca" (Catalan)
-- summary: {
-    overview: "Brief 2-3 sentence overview of the meeting IN CATALAN",
-    topics_discussed: ["Topic 1", "Topic 2", "Topic 3"] - Main topics discussed IN CATALAN,
-    key_points: ["Point 1", "Point 2"] - 3-6 most important points IN CATALAN,
-    strengths: ["Strength 1", "Strength 2"] - Positive aspects, opportunities, what went well IN CATALAN,
-    weaknesses: ["Weakness 1", "Weakness 2"] - Concerns, risks, challenges, objections IN CATALAN,
-    action_items: ["Action 1", "Action 2"] - Concrete next steps identified IN CATALAN
-  }
-- sentiment (positive/neutral/negative) - Overall tone of the meeting
-- sentiment_confidence (0.0-1.0) - How confident you are about the sentiment
-- customer: {name, company} - ONLY if explicitly mentioned in the audio, otherwise null
-- participants: [{name, role IN CATALAN}] - ONLY people explicitly mentioned by name in the audio. If no names mentioned, return empty array []
-- meeting: {duration_min} - IMPORTANT: Do NOT include datetime_iso, it will be provided separately
-- intents: [{type: SEND_EMAIL|NOTIFY_DEPARTMENT|SCHEDULE_MEETING|SEND_PROPOSAL|ASK_INFO|FOLLOW_UP|REQUEST_APPROVAL, description IN CATALAN, department?, deadline_iso?, priority: low|medium|high, assignee?}]
-- trello_tasks: [{title IN CATALAN: "Clear, actionable task title", description IN CATALAN: "Detailed task description with context", priority: low|medium|high, due_date_iso?: "Suggested due date if mentioned", assignee?: "Person's name if mentioned", context IN CATALAN: "Why this task is needed based on the conversation"}] - Extract ALL tasks, to-dos, action items, or follow-ups mentioned that should be tracked. Look for phrases like "precisamos fazer", "temos que", "vamos criar", "adicionar tarefa", "follow-up", "lembrar de", etc.
-- email_drafts: [{audience: client|finance|tech|sales|support|management|custom, subject IN CATALAN, body_md IN CATALAN, suggested_recipients?: [], context IN CATALAN: "why this email is needed"}] - Create detailed, professional email drafts IN CATALAN for EVERY action that requires communication. Include follow-ups, proposals, information requests, internal notifications. **CRITICAL: Always end emails with "Cordialment,\n{{USER_NAME}}" - this placeholder will be replaced with the actual user name.**
-- calendar_events: [{title IN CATALAN, description IN CATALAN, proposed_datetime_iso, duration_min, attendees: [{name, email?}], notes IN CATALAN, meeting_type: "follow_up|demo|negotiation|technical|internal"}] - For any meeting mentioned or needs to be scheduled.
-- risks: [{label IN CATALAN, severity: low|medium|high, note IN CATALAN, mitigation? IN CATALAN: "suggested action to address this risk"}]
-- sales_opportunities: [{
-    title IN CATALAN: "Brief opportunity title",
-    description IN CATALAN: "Detailed description of the sales opportunity",
-    product_service IN CATALAN: "Which product/service could be sold",
-    estimated_value: "low|medium|high" - Potential business value,
-    urgency: "low|medium|high" - How urgent is this opportunity,
-    probability: "low|medium|high" - Likelihood of closing,
-    trigger IN CATALAN: "What in the conversation indicated this opportunity",
-    recommended_action IN CATALAN: "What should be done next to pursue this"
-  }] - Identify ALL potential sales opportunities mentioned or implied
-- client_needs: [{
-    need IN CATALAN: "Specific client need or pain point",
-    importance: "low|medium|high",
-    solution IN CATALAN: "How our product/service addresses this need"
-  }] - Extract explicit and implicit client needs
-- objections: [{
-    objection IN CATALAN: "Client concern or objection",
-    type: "price|timing|technical|trust|other",
-    severity: "low|medium|high",
-    response IN CATALAN: "Suggested response or how to address it"
-  }] - Any concerns or objections raised by the client
-- business_insights: {
-    overall_interest: "low|medium|high" - Client's overall interest level,
-    decision_stage: "awareness|consideration|decision|closed" - Where they are in buying journey,
-    budget_indicators IN CATALAN: "Any mentions about budget or financial capacity",
-    timeline_indicators IN CATALAN: "Any mentions about when they need solution",
-    competition_mentions IN CATALAN: "Any mentions of competitors or alternatives",
-    key_influencers IN CATALAN: "Who seems to be the decision maker(s)"
-  }
+**INPUT LANGUAGE CAPABILITY:**
+You can process audio transcripts in English, Portuguese (Brazilian or European), French, or Spanish. Identify the source language automatically and process it seamlessly.
 
-CRITICAL INSTRUCTIONS - DO NOT INVENT INFORMATION:
-- EVERYTHING must be written in CATALAN (ca) regardless of the transcript language
-- The transcript can be in Portuguese, Spanish, English, French or Catalan, but ALL output MUST be in Catalan
-- Be COMPREHENSIVE - identify ALL actionable items from the conversation
-- **NEVER INVENT PARTICIPANT NAMES** - Only include participants if their names are explicitly mentioned in the audio
-- **NEVER INVENT CUSTOMER NAMES OR COMPANIES** - Only include if explicitly stated in the audio
-- **NEVER INVENT CONTACT INFORMATION** - Do not make up emails, phone numbers, or addresses
-- If participant names are not mentioned, return empty array for participants: []
-- If customer name/company not mentioned, set customer to null
-- For emails: create drafts IN CATALAN for client follow-ups, internal updates to relevant departments, proposals, scheduling confirmations
-- **ALWAYS end email body with: "Cordialment,\n{{USER_NAME}}" - this exact placeholder will be automatically replaced**
-- For meetings: if someone says "let's schedule" or "we need to meet", create a calendar event even if date/time not specified (suggest next week)
-- CRITICAL: Do NOT infer or invent the meeting date/time from the transcript - it will be provided separately as the actual recording time
-- **CURRENT DATE: 2025-11-07** - Use this as reference for any date calculations
-- Current timezone: Europe/Lisbon
-- MANDATORY: All text fields in the output MUST be in Catalan language
-- ONLY extract information that is EXPLICITLY stated in the audio transcript`;
+**OUTPUT CONSTRAINT - CRITICAL:**
+ALL output MUST be written in **European Portuguese (pt-PT)**. Never use Brazilian Portuguese expressions. Use formal European Portuguese conventions.
+
+**REPORT STRUCTURE:**
+Return a JSON object with two main fields:
+1. "formatted_report" - A markdown string following this EXACT structure:
+2. "structured_data" - The detailed JSON data for system processing
+
+The "formatted_report" MUST follow this EXACT markdown format:
+
+# 📄 Resumo Executivo
+[2-3 sentences providing a high-level overview of the meeting purpose, participants, and main outcome]
+
+# 🔑 Pontos Chave
+- [Key takeaway 1]
+- [Key takeaway 2]
+- [Key takeaway 3]
+- [Add more as needed, 3-6 points total]
+
+# ✅ Plano de Ação
+- [ ] [Task 1] — **Responsável:** [Name or "A definir"]
+- [ ] [Task 2] — **Responsável:** [Name or "A definir"]
+- [ ] [Add more tasks as identified]
+
+# 📊 Análise de Sentimento
+**Tom geral:** [Positivo/Neutro/Negativo]
+[1-2 sentences describing the meeting atmosphere, engagement level, and any notable emotional dynamics]
+
+**STRUCTURED DATA FORMAT:**
+The "structured_data" field must contain:
+- language: ALWAYS "pt" (European Portuguese)
+- sentiment: "positive" | "neutral" | "negative"
+- sentiment_confidence: 0.0-1.0
+- customer: {name, company} - ONLY if explicitly mentioned, otherwise null
+- participants: [{name, role}] - ONLY people explicitly mentioned by name. Empty array if none.
+- meeting: {duration_min}
+- intents: [{type: SEND_EMAIL|NOTIFY_DEPARTMENT|SCHEDULE_MEETING|SEND_PROPOSAL|ASK_INFO|FOLLOW_UP|REQUEST_APPROVAL, description, department?, deadline_iso?, priority: low|medium|high, assignee?}]
+- email_drafts: [{audience: client|finance|tech|sales|support|management|custom, subject, body_md, suggested_recipients?: [], context}] - **ALWAYS end emails with "Com os melhores cumprimentos,\n{{USER_NAME}}"**
+- risks: [{label, severity: low|medium|high, note, mitigation?}]
+- sales_opportunities: [{title, description, product_service, estimated_value: low|medium|high, urgency: low|medium|high, probability: low|medium|high, trigger, recommended_action}]
+- client_needs: [{need, importance: low|medium|high, solution}]
+- objections: [{objection, type: price|timing|technical|trust|other, severity: low|medium|high, response}]
+- business_insights: {overall_interest: low|medium|high, decision_stage: awareness|consideration|decision|closed, budget_indicators, timeline_indicators, competition_mentions, key_influencers}
+
+**CRITICAL RULES - DO NOT VIOLATE:**
+1. ALL text output MUST be in European Portuguese (pt-PT)
+2. NEVER invent participant names - only include if explicitly stated
+3. NEVER invent customer names or companies - only include if explicitly stated  
+4. NEVER invent contact information (emails, phones, addresses)
+5. If no names mentioned, use empty arrays
+6. If customer not mentioned, set to null
+7. **Email signature:** Always end with "Com os melhores cumprimentos,\n{{USER_NAME}}"
+8. Current date reference: ${new Date().toISOString().split('T')[0]}
+9. Timezone: Europe/Lisbon
+10. Be comprehensive - identify ALL actionable items from the conversation`;
 
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
@@ -182,15 +174,24 @@ CRITICAL INSTRUCTIONS - DO NOT INVENT INFORMATION:
       .eq('id', user.id)
       .single();
     
-    const userName = profile?.name || 'L\'Equip';
+    const userName = profile?.name || 'A Equipa';
     
-    // Replace placeholder in all email drafts
+    // Replace placeholder in all email drafts with European Portuguese signature
+    if (parsed.structured_data?.email_drafts && Array.isArray(parsed.structured_data.email_drafts)) {
+      parsed.structured_data.email_drafts = parsed.structured_data.email_drafts.map((draft: any) => ({
+        ...draft,
+        body_md: draft.body_md?.replace(/\{\{USER_NAME\}\}/g, userName)
+          .replace(/\[O Seu Nome\]/gi, userName)
+          .replace(/\[Seu Nome\]/gi, userName)
+          .replace(/\[Your Name\]/gi, userName)
+      }));
+    }
+    // Also handle legacy format if AI returns flat email_drafts
     if (parsed.email_drafts && Array.isArray(parsed.email_drafts)) {
       parsed.email_drafts = parsed.email_drafts.map((draft: any) => ({
         ...draft,
         body_md: draft.body_md?.replace(/\{\{USER_NAME\}\}/g, userName)
-          .replace(/\[El teu Nom\]/gi, userName)
-          .replace(/\[El vostre Nom\]/gi, userName)
+          .replace(/\[O Seu Nome\]/gi, userName)
           .replace(/\[Seu Nome\]/gi, userName)
           .replace(/\[Your Name\]/gi, userName)
       }));
