@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, FileText, Calendar, User, LogOut, Mic2, BarChart3, Settings as SettingsIcon, Target, AlertTriangle, CheckSquare, ListTodo, AlertCircle, Search, Filter } from "lucide-react";
+import { Loader2, FileText, Calendar, User, LogOut, Mic2, BarChart3, LayoutDashboard, Target, AlertTriangle, CheckSquare, ListTodo, AlertCircle, Search, Filter } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { NotificationBadge } from "@/components/NotificationBadge";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -215,9 +215,9 @@ const MyMeetings = () => {
                 <BarChart3 className="w-4 h-4 mr-2" />
                 Análises
               </Button>
-              <Button variant="ghost" size="sm" onClick={() => navigate("/settings")}>
-                <SettingsIcon className="w-4 h-4 mr-2" />
-                Definições
+              <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard")}>
+                <LayoutDashboard className="w-4 h-4 mr-2" />
+                Dashboard
               </Button>
               <NotificationBadge />
               <ThemeToggle />
