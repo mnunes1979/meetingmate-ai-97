@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { VoiceRecorder } from "@/components/recorder/VoiceRecorder";
+import { VoiceNoteRecorder } from "@/components/recorder/VoiceNoteRecorder";
 import { ProcessingSteps } from "@/components/meeting/ProcessingSteps";
 import { SummaryCard } from "@/components/meeting/SummaryCard";
 import { EntitiesCard } from "@/components/meeting/EntitiesCard";
@@ -889,12 +890,19 @@ const Index = () => {
       </header>
 
       {/* Main content */}
-      <main className="container mx-auto px-3 sm:px-4 py-4 sm:py-8 max-w-4xl">
+      <main className="container mx-auto px-3 sm:px-4 py-4 sm:py-8 max-w-7xl">
         <div className="space-y-6">
-          <VoiceRecorder
-            onRecordingComplete={handleRecordingComplete}
-            isProcessing={!!processingStep}
-          />
+          {/* Two recorder cards side by side */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
+            <VoiceRecorder
+              onRecordingComplete={handleRecordingComplete}
+              isProcessing={!!processingStep}
+            />
+            <VoiceNoteRecorder
+              onRecordingComplete={handleRecordingComplete}
+              isProcessing={!!processingStep}
+            />
+          </div>
 
           {processingStep && <ProcessingSteps currentStep={processingStep} />}
 
