@@ -12,12 +12,13 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { Home, FileText, BarChart3, Building2, Users, Settings, Shield, Key, Server } from "lucide-react";
+import { Home, FileText, BarChart3, Building2, Users, Settings, Shield, Key, Server, FolderOpen } from "lucide-react";
 import { useUserAccess } from "@/hooks/useUserAccess";
 
 const items = [
   { title: "Dashboard", url: "/dashboard", icon: Home },
   { title: "Reuniões", url: "/admin", icon: FileText },
+  { title: "Gestão Reuniões", url: "/admin/meetings", icon: FolderOpen },
   { title: "Analítica de Email", url: "/email-analytics", icon: BarChart3 },
   { title: "Departamentos", url: "/departments", icon: Building2 },
   { title: "Utilizadores", url: "/admin/users", icon: Users },

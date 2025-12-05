@@ -5,10 +5,10 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, FileText, Calendar, User, LogOut, Mic2, BarChart3, Settings as SettingsIcon, Target, AlertTriangle, CheckSquare, ListTodo, AlertCircle } from "lucide-react";
+import { Loader2, FileText, Calendar, User, LogOut, Mic2, BarChart3, Settings as SettingsIcon, Target, AlertTriangle, CheckSquare, ListTodo, AlertCircle, Search, Filter } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { NotificationBadge } from "@/components/NotificationBadge";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { LanguageSelector } from "@/components/LanguageSelector";
 import { MobileNav } from "@/components/MobileNav";
 import { useAuth } from "@/hooks/useAuth";
 import { format, subDays } from "date-fns";
@@ -42,6 +42,8 @@ const MyMeetings = () => {
   const [loading, setLoading] = useState(true);
   const [notes, setNotes] = useState<MeetingNote[]>([]);
   const [dateFilter, setDateFilter] = useState<string>("7");
+  const [sentimentFilter, setSentimentFilter] = useState<string>("all");
+  const [searchQuery, setSearchQuery] = useState("");
   const [userProfile, setUserProfile] = useState<any>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -107,6 +109,17 @@ const MyMeetings = () => {
         query = query.gte("created_at", filterDate);
       }
 
+      // Apply sentiment filter
+      if (sentimentFilter !== "all") {
+        if (sentimentFilter === "positive") {
+          query = query.gte("sentiment_score", 70);
+        } else if (sentimentFilter === "neutral") {
+          query = query.gte("sentiment_score", 40).lt("sentiment_score", 70);
+        } else if (sentimentFilter === "negative") {
+          query = query.lt("sentiment_score", 40);
+        }
+      }
+
       const { data, error } = await query.order("created_at", { ascending: false });
 
       if (error) throw error;
@@ -125,7 +138,17 @@ const MyMeetings = () => {
     if (user) {
       loadNotes(user.id);
     }
-  }, [dateFilter]);
+  }, [dateFilter, sentimentFilter]);
+
+  const filteredNotes = notes.filter(note => {
+    if (!searchQuery) return true;
+    const search = searchQuery.toLowerCase();
+    return (
+      note.customer_name?.toLowerCase().includes(search) ||
+      note.customer_company?.toLowerCase().includes(search) ||
+      note.sales_rep_name?.toLowerCase().includes(search)
+    );
+  });
 
   const getSentimentColor = (sentiment: string, score?: number | null) => {
     if (score !== null && score !== undefined) {
@@ -198,7 +221,6 @@ const MyMeetings = () => {
               </Button>
               <NotificationBadge />
               <ThemeToggle />
-              <LanguageSelector />
               <Button variant="ghost" size="icon" onClick={handleSignOut} title="Terminar Sessão">
                 <LogOut className="w-5 h-5" />
               </Button>
@@ -211,28 +233,59 @@ const MyMeetings = () => {
       </header>
 
       <main className="container mx-auto px-3 sm:px-4 py-4 sm:py-8 max-w-6xl">
-        <div className="mb-4 sm:mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-          <h2 className="text-lg sm:text-xl font-semibold">
-            Histórico ({notes.length})
-          </h2>
-          <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto">
-            <Select value={dateFilter} onValueChange={setDateFilter}>
-              <SelectTrigger className="w-[140px]">
-                <SelectValue placeholder="Últimos 7 dias" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="7">Últimos 7 dias</SelectItem>
-                <SelectItem value="30">Últimos 30 dias</SelectItem>
-                <SelectItem value="all">Todo o período</SelectItem>
-              </SelectContent>
-            </Select>
+        {/* Filters */}
+        <div className="mb-4 sm:mb-6 space-y-3">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <h2 className="text-lg sm:text-xl font-semibold">
+              Histórico ({filteredNotes.length})
+            </h2>
             <Button onClick={() => loadNotes(user.id)} variant="outline" size="sm">
               Atualizar
             </Button>
           </div>
+          
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex items-center gap-2">
+              <Filter className="w-4 h-4 text-muted-foreground" />
+            </div>
+            
+            <div className="relative flex-1 min-w-[180px] max-w-[250px]">
+              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="Pesquisar cliente..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9 h-9"
+              />
+            </div>
+
+            <Select value={dateFilter} onValueChange={setDateFilter}>
+              <SelectTrigger className="w-[130px] h-9">
+                <SelectValue placeholder="Período" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="7">Últimos 7 dias</SelectItem>
+                <SelectItem value="30">Últimos 30 dias</SelectItem>
+                <SelectItem value="90">Últimos 90 dias</SelectItem>
+                <SelectItem value="all">Todo o período</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Select value={sentimentFilter} onValueChange={setSentimentFilter}>
+              <SelectTrigger className="w-[120px] h-9">
+                <SelectValue placeholder="Sentimento" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos</SelectItem>
+                <SelectItem value="positive">Positivo</SelectItem>
+                <SelectItem value="neutral">Neutro</SelectItem>
+                <SelectItem value="negative">Negativo</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
-        {notes.length === 0 ? (
+        {filteredNotes.length === 0 ? (
           <Card className="p-6 sm:p-8 text-center">
             <FileText className="w-10 h-10 sm:w-12 sm:h-12 text-muted-foreground mx-auto mb-4" />
             <p className="text-sm sm:text-base text-muted-foreground">Ainda não tem reuniões gravadas</p>
@@ -243,7 +296,7 @@ const MyMeetings = () => {
           </Card>
         ) : (
           <div className="space-y-3 sm:space-y-4">
-            {notes.map((note) => {
+            {filteredNotes.map((note) => {
               const opportunities = note.opportunities as string[] | null;
               const risks = note.risks as string[] | null;
               const actionItems = note.action_items as Array<{ task: string; assignee: string; priority: string }> | null;

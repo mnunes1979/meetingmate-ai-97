@@ -16,6 +16,7 @@ import EmailAnalytics from "./pages/EmailAnalytics";
 import AuditLogs from "./pages/AuditLogs";
 import ApiKeys from "./pages/ApiKeys";
 import AdminControlPanel from "./pages/AdminControlPanel";
+import AdminMeetings from "./pages/AdminMeetings";
 import Tasks from "./pages/Tasks";
 import NotFound from "./pages/NotFound";
 
@@ -43,6 +44,7 @@ const App = () => (
           <Route path="/admin/audit-logs" element={<AuditLogs />} />
           <Route path="/admin/api-keys" element={<ApiKeys />} />
           <Route path="/admin/control-panel" element={<AdminControlPanel />} />
+          <Route path="/admin/meetings" element={<AdminMeetings />} />
           <Route path="/tasks" element={<Tasks />} />
           
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
