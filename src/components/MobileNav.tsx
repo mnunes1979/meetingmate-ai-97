@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Menu, X, Mic2, FileText, BarChart3, Building2, Settings as SettingsIcon, LogOut, Users, Home, ListTodo } from "lucide-react";
+import { Menu, X, Mic2, FileText, BarChart3, Building2, LogOut, Users, Home, ListTodo } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -58,9 +58,9 @@ export const MobileNav = ({ isAdmin = false, userEmail, accessType = 'full' }: M
           )}
 
           <nav className="flex flex-col gap-2 flex-1">
-            {accessType === 'renewals_only' ? (
+          {accessType === 'renewals_only' ? (
               <>
-                {/* Only Renewals and Settings for renewals_only users */}
+                {/* Only Renewals for renewals_only users */}
                 <Button
                   variant="ghost"
                   className="justify-start gap-3"
@@ -68,15 +68,6 @@ export const MobileNav = ({ isAdmin = false, userEmail, accessType = 'full' }: M
                 >
                   <FileText className="h-4 w-4" />
                   Renovações
-                </Button>
-
-                <Button
-                  variant="ghost"
-                  className="justify-start gap-3"
-                  onClick={() => navigateTo("/settings")}
-                >
-                  <SettingsIcon className="h-4 w-4" />
-                  {t('navigation.settings')}
                 </Button>
               </>
             ) : (
@@ -125,15 +116,6 @@ export const MobileNav = ({ isAdmin = false, userEmail, accessType = 'full' }: M
                 >
                   <Building2 className="h-4 w-4" />
                   {t('navigation.departments')}
-                </Button>
-
-                <Button
-                  variant="ghost"
-                  className="justify-start gap-3"
-                  onClick={() => navigateTo("/settings")}
-                >
-                  <SettingsIcon className="h-4 w-4" />
-                  {t('navigation.settings')}
                 </Button>
               </>
             )}

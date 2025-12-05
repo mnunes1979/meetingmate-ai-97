@@ -12,7 +12,7 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { Home, FileText, BarChart3, Building2, Users, Settings, Shield, Key, Server, FolderOpen } from "lucide-react";
+import { Home, FileText, BarChart3, Building2, Users, Shield, Key, Server, FolderOpen } from "lucide-react";
 import { useUserAccess } from "@/hooks/useUserAccess";
 
 const items = [
@@ -25,7 +25,6 @@ const items = [
   { title: "Logs de Segurança", url: "/admin/audit-logs", icon: Shield },
   { title: "API Keys", url: "/admin/api-keys", icon: Key },
   { title: "Control Panel", url: "/admin/control-panel", icon: Server },
-  { title: "Configurações", url: "/settings", icon: Settings },
 ];
 
 export function AppSidebar() {
@@ -38,9 +37,9 @@ export function AppSidebar() {
   const filteredItems = useMemo(() => {
     if (loading) return items;
     
-    // For renewals_only users, redirect to settings only
+    // For renewals_only users, show only renewals-related items
     if (accessType === 'renewals_only') {
-      return items.filter(item => item.url === '/settings');
+      return [];
     }
     
     return items;

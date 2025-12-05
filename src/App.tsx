@@ -11,7 +11,6 @@ import UserManagement from "./pages/UserManagement";
 import MeetingDetail from "./pages/MeetingDetail";
 import MyMeetings from "./pages/MyMeetings";
 import Departments from "./pages/Departments";
-import Settings from "./pages/Settings";
 import EmailAnalytics from "./pages/EmailAnalytics";
 import AuditLogs from "./pages/AuditLogs";
 import ApiKeys from "./pages/ApiKeys";
@@ -39,7 +38,6 @@ const App = () => (
           <Route path="/admin/users" element={<UserManagement />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/departments" element={<Departments />} />
-          <Route path="/settings" element={<Settings />} />
           <Route path="/email-analytics" element={<EmailAnalytics />} />
           <Route path="/admin/audit-logs" element={<AuditLogs />} />
           <Route path="/admin/api-keys" element={<ApiKeys />} />

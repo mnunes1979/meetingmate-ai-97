@@ -5,7 +5,8 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Loader2, Calendar, Clock, User, Building2, TrendingUp, TrendingDown, AlertTriangle, Lightbulb, Mail, CheckCircle2, XCircle, Sparkles, ListTodo } from "lucide-react";
+import { ArrowLeft, Loader2, Calendar, Clock, User, Building2, TrendingUp, TrendingDown, AlertTriangle, Lightbulb, Mail, CheckCircle2, XCircle, Sparkles, ListTodo, Edit2 } from "lucide-react";
+import { EntitiesCard } from "@/components/meeting/EntitiesCard";
 import { FollowUpEmailDialog } from "@/components/meeting/FollowUpEmailDialog";
 import { MeetingKanban } from "@/components/meeting/MeetingKanban";
 import { MeetingComments } from "@/components/meeting/MeetingComments";
@@ -166,6 +167,48 @@ const MeetingDetail = () => {
     }
   };
 
+  const handleUpdateMeetingDetails = async (updates: {
+    customerName?: string;
+    customerCompany?: string;
+    participants?: Array<{ name: string; role?: string }>;
+  }) => {
+    if (!meeting || !isAdmin) return;
+    
+    try {
+      const { error } = await supabase
+        .from('meeting_notes')
+        .update({
+          customer_name: updates.customerName || null,
+          customer_company: updates.customerCompany || null,
+          participants: updates.participants || [],
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', meeting.id);
+
+      if (error) throw error;
+
+      setMeeting({
+        ...meeting,
+        customer_name: updates.customerName || null,
+        customer_company: updates.customerCompany || null,
+        participants: updates.participants || [],
+      });
+
+      toast({
+        title: "Sucesso",
+        description: "Detalhes da reunião atualizados",
+      });
+    } catch (error: any) {
+      console.error('Error updating meeting:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao atualizar os detalhes",
+        variant: "destructive",
+      });
+      throw error;
+    }
+  };
+
   const getSentimentColor = (sentiment: string) => {
     switch (sentiment) {
       case 'positive':
@@ -243,8 +286,18 @@ const MeetingDetail = () => {
 
       {/* Main content */}
       <main className="container mx-auto px-3 sm:px-4 py-4 sm:py-8 max-w-5xl space-y-4 sm:space-y-6">
-        {/* Info Básica */}
-        <Card className="p-6 space-y-4">
+        {/* Info Básica - Editável para admins */}
+        <EntitiesCard
+          customerName={meeting.customer_name || undefined}
+          customerCompany={meeting.customer_company || undefined}
+          participants={participants}
+          meetingDatetime={meeting.meeting_datetime || undefined}
+          meetingDuration={meeting.meeting_duration_min || undefined}
+          onUpdate={isAdmin ? handleUpdateMeetingDetails : undefined}
+        />
+
+        {/* Badges de info */}
+        <Card className="p-4">
           <div className="flex flex-wrap gap-2">
             {meeting.sales_rep_name && (
               <Badge variant="outline" className="gap-1.5">
@@ -264,69 +317,6 @@ const MeetingDetail = () => {
               {meeting.language.toUpperCase()}
             </Badge>
           </div>
-
-          {(meeting.customer_name || meeting.customer_company || meeting.meeting_datetime || meeting.meeting_duration_min) && (
-            <>
-              <Separator />
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {meeting.customer_name && (
-                  <div className="flex items-center gap-2 text-sm">
-                    <User className="w-4 h-4 text-muted-foreground" />
-                    <span className="font-medium">{t('meetingDetail.client')}</span>
-                    <span>{meeting.customer_name}</span>
-                  </div>
-                )}
-                {meeting.customer_company && (
-                  <div className="flex items-center gap-2 text-sm">
-                    <Building2 className="w-4 h-4 text-muted-foreground" />
-                    <span className="font-medium">{t('meetingDetail.company')}</span>
-                    <span>{meeting.customer_company}</span>
-                  </div>
-                )}
-                {meeting.meeting_datetime && (
-                  <div className="flex items-center gap-2 text-sm">
-                    <Calendar className="w-4 h-4 text-muted-foreground" />
-                    <span className="font-medium">{t('meetingDetail.date')}</span>
-                    <span>
-                      {new Date(meeting.meeting_datetime).toLocaleString(({
-                        pt: 'pt-PT',
-                        es: 'es-ES',
-                        ca: 'ca-ES',
-                        fr: 'fr-FR',
-                        en: 'en-US',
-                      } as Record<string, string>)[i18n.language] || 'ca-ES', {
-                        dateStyle: 'short',
-                        timeStyle: 'short',
-                      })}
-                    </span>
-                  </div>
-                )}
-                {meeting.meeting_duration_min && (
-                  <div className="flex items-center gap-2 text-sm">
-                    <Clock className="w-4 h-4 text-muted-foreground" />
-                    <span className="font-medium">{t('meetingDetail.duration')}</span>
-                    <span>{meeting.meeting_duration_min} {t('meeting.minutes')}</span>
-                  </div>
-                )}
-              </div>
-            </>
-          )}
-
-          {participants && participants.length > 0 && (
-            <>
-              <Separator />
-              <div>
-                <h3 className="font-semibold mb-2">{t('meetingDetail.participants')}</h3>
-                <div className="flex flex-wrap gap-2">
-                  {participants.map((p: any, i: number) => (
-                    <Badge key={i} variant="secondary">
-                      {p.name} {p.role && `• ${p.role}`}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-            </>
-          )}
         </Card>
 
         {/* Resumo */}
