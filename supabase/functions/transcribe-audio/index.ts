@@ -8,6 +8,9 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// OpenAI Whisper file size limit (25MB)
+const MAX_CHUNK_SIZE = 24 * 1024 * 1024; // 24MB to be safe
+
 // Input validation schema - now accepts storage path instead of base64
 const transcribeSchema = z.object({
   storagePath: z.string().min(1, "Storage path required"),
@@ -16,7 +19,7 @@ const transcribeSchema = z.object({
 
 // Normalize language codes to ISO 639-1 format
 function normalizeLanguageCode(language: string | undefined): string {
-  if (!language) return 'ca';
+  if (!language) return 'pt';
   
   const langLower = language.toLowerCase();
   
@@ -41,7 +44,75 @@ function normalizeLanguageCode(language: string | undefined): string {
     'fr': 'fr',
   };
   
-  return languageMap[langLower] || 'ca';
+  return languageMap[langLower] || 'pt';
+}
+
+// Split audio into chunks if larger than 25MB
+async function splitAudioIntoChunks(audioData: Uint8Array, mimeType: string): Promise<Blob[]> {
+  const totalSize = audioData.length;
+  
+  if (totalSize <= MAX_CHUNK_SIZE) {
+    console.log('[Chunking] Audio size within limit, no chunking needed:', totalSize, 'bytes');
+    return [new Blob([new Uint8Array(audioData)], { type: mimeType })];
+  }
+  
+  console.log('[Chunking] Audio exceeds limit, splitting into chunks. Total size:', totalSize, 'bytes');
+  
+  const chunks: Blob[] = [];
+  let offset = 0;
+  let chunkIndex = 0;
+  
+  while (offset < totalSize) {
+    const chunkSize = Math.min(MAX_CHUNK_SIZE, totalSize - offset);
+    const chunkData = new Uint8Array(audioData.slice(offset, offset + chunkSize));
+    chunks.push(new Blob([chunkData], { type: mimeType }));
+    
+    console.log(`[Chunking] Chunk ${chunkIndex}: ${chunkSize} bytes (offset: ${offset})`);
+    
+    offset += chunkSize;
+    chunkIndex++;
+  }
+  
+  console.log(`[Chunking] Created ${chunks.length} chunks`);
+  return chunks;
+}
+
+// Transcribe a single audio chunk
+async function transcribeChunk(
+  chunk: Blob, 
+  openaiKey: string, 
+  chunkIndex: number
+): Promise<{ text: string; language: string }> {
+  const formData = new FormData();
+  const extension = chunk.type.includes('wav') ? 'wav' : 'webm';
+  formData.append('file', chunk, `audio_chunk_${chunkIndex}.${extension}`);
+  formData.append('model', 'whisper-1');
+  formData.append('language', 'pt'); // Default to Portuguese
+  formData.append('response_format', 'verbose_json');
+  
+  console.log(`[Transcribe] Sending chunk ${chunkIndex} to OpenAI, size: ${chunk.size} bytes`);
+  
+  const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${openaiKey}`,
+    },
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error(`[Transcribe] OpenAI API error for chunk ${chunkIndex}:`, response.status, errorText);
+    throw new Error(`Transcription failed for chunk ${chunkIndex}: ${errorText}`);
+  }
+
+  const result = await response.json();
+  console.log(`[Transcribe] Chunk ${chunkIndex} transcribed, text length: ${result.text?.length}`);
+  
+  return {
+    text: result.text || '',
+    language: result.language || 'pt',
+  };
 }
 
 serve(async (req) => {
@@ -139,68 +210,59 @@ serve(async (req) => {
       throw new Error('Audio file is too small or corrupted. Please record at least 3 seconds of clear audio.');
     }
     
-    // Prepare form data
-    const audioMimeType = mime || 'audio/webm';
-    const formData = new FormData();
-    const blob = new Blob([binaryAudio], { type: audioMimeType });
-    formData.append('file', blob, 'audio.webm');
-    formData.append('model', 'whisper-1');
-    formData.append('language', 'ca');
-    formData.append('response_format', 'verbose_json');
-    
-    console.log('Audio blob created:', blob.size, 'bytes, type:', blob.type);
-
-    // Send to OpenAI Whisper
-    console.log('Sending request to OpenAI Whisper API...');
+    // Get OpenAI key
     const openaiKey = Deno.env.get('OPENAI_API_KEY');
     if (!openaiKey) {
       console.error('OPENAI_API_KEY not configured');
       throw new Error('OpenAI API key not configured');
     }
     
-    const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${openaiKey}`,
-      },
-      body: formData,
-    });
-
-    console.log('OpenAI response status:', response.status);
+    const audioMimeType = mime || 'audio/webm';
     
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('OpenAI API error:', response.status, errorText);
-      throw new Error('Transcription service temporarily unavailable. Please try again later.');
+    // Split into chunks if necessary
+    const chunks = await splitAudioIntoChunks(binaryAudio, audioMimeType);
+    
+    // Transcribe all chunks
+    const transcriptions: string[] = [];
+    let detectedLanguage = 'pt';
+    
+    for (let i = 0; i < chunks.length; i++) {
+      const result = await transcribeChunk(chunks[i], openaiKey, i);
+      transcriptions.push(result.text);
+      if (i === 0) {
+        detectedLanguage = result.language; // Use language from first chunk
+      }
     }
-
-    const result = await response.json();
-    console.log('OpenAI response received successfully');
+    
+    // Combine all transcriptions
+    const fullTranscript = transcriptions.join(' ');
     
     // Validate transcription result
-    if (!result.text || result.text.trim().length === 0) {
+    if (!fullTranscript || fullTranscript.trim().length === 0) {
       console.error('Empty transcription result from OpenAI');
       throw new Error('No speech detected in audio. Please ensure you speak clearly during recording.');
     }
     
     // Normalize language code to ISO 639-1 format
-    const normalizedLanguage = normalizeLanguageCode(result.language);
+    const normalizedLanguage = normalizeLanguageCode(detectedLanguage);
     
     // Log rate limit
     await supabaseAdmin.from('rate_limits').insert({
       user_id: user.id,
       action: 'transcribe',
+      metadata: { chunks: chunks.length, audioSize: binaryAudio.length },
     });
     
     console.log('Transcription successful:', {
-      originalLanguage: result.language,
+      originalLanguage: detectedLanguage,
       normalizedLanguage: normalizedLanguage,
-      textLength: result.text?.length,
+      textLength: fullTranscript.length,
+      chunks: chunks.length,
     });
 
     return new Response(
       JSON.stringify({ 
-        text: result.text,
+        text: fullTranscript,
         language: normalizedLanguage,
         confidence: 0.95 
       }),

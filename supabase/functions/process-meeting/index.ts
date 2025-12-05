@@ -1,3 +1,4 @@
+import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
@@ -14,7 +15,36 @@ const processMeetingSchema = z.object({
   recordingDateTime: z.string().datetime().optional(),
 });
 
-const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+// Structured output schema for validation
+const structuredOutputSchema = z.object({
+  summary: z.string(),
+  sentiment_score: z.number().min(0).max(100),
+  opportunities: z.array(z.string()),
+  risks: z.array(z.string()),
+  action_items: z.array(z.object({
+    task: z.string(),
+    assignee: z.string(),
+    priority: z.enum(['High', 'Medium', 'Low']),
+  })),
+  topics: z.array(z.string()),
+  // Extended fields for compatibility with existing system
+  sentiment: z.enum(['positive', 'neutral', 'negative']).optional(),
+  formatted_report: z.string().optional(),
+  customer: z.object({
+    name: z.string().nullable(),
+    company: z.string().nullable(),
+  }).nullable().optional(),
+  participants: z.array(z.object({
+    name: z.string(),
+    role: z.string().optional(),
+  })).optional(),
+  intents: z.array(z.any()).optional(),
+  email_drafts: z.array(z.any()).optional(),
+  sales_opportunities: z.array(z.any()).optional(),
+  client_needs: z.array(z.any()).optional(),
+  objections: z.array(z.any()).optional(),
+  business_insights: z.any().optional(),
+});
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -78,6 +108,13 @@ serve(async (req) => {
 
     console.log('Processing meeting for user:', user.id);
 
+    // Get OpenAI API key
+    const openaiKey = Deno.env.get('OPENAI_API_KEY');
+    if (!openaiKey) {
+      console.error('OPENAI_API_KEY not configured');
+      throw new Error('OpenAI API key not configured. Please configure it in API Keys settings.');
+    }
+
     const systemPrompt = `You are a precise sales-ops analyst specializing in multilingual meeting analysis.
 
 **INPUT LANGUAGE CAPABILITY:**
@@ -86,12 +123,35 @@ You can process audio transcripts in English, Portuguese (Brazilian or European)
 **OUTPUT CONSTRAINT - CRITICAL:**
 ALL output MUST be written in **European Portuguese (pt-PT)**. Never use Brazilian Portuguese expressions. Use formal European Portuguese conventions.
 
-**REPORT STRUCTURE:**
-Return a JSON object with two main fields:
-1. "formatted_report" - A markdown string following this EXACT structure:
-2. "structured_data" - The detailed JSON data for system processing
+**REQUIRED JSON OUTPUT STRUCTURE:**
+You MUST return a valid JSON object with these EXACT fields:
 
-The "formatted_report" MUST follow this EXACT markdown format:
+{
+  "summary": "String - Executive summary of the meeting in 2-4 sentences",
+  "sentiment_score": Number 0-100 where 0 is angry/critical and 100 is excellent/very positive,
+  "sentiment": "positive" | "neutral" | "negative",
+  "opportunities": ["Array of strings - Specific business opportunities detected"],
+  "risks": ["Array of strings - Critical situations or unhappy client remarks"],
+  "action_items": [
+    {
+      "task": "Description of the task",
+      "assignee": "Person responsible or 'A definir'",
+      "priority": "High" | "Medium" | "Low"
+    }
+  ],
+  "topics": ["Array of strings - Main topics discussed"],
+  "formatted_report": "Markdown formatted report (see structure below)",
+  "customer": { "name": "string or null", "company": "string or null" },
+  "participants": [{ "name": "string", "role": "string" }],
+  "intents": [{ "type": "SEND_EMAIL|NOTIFY_DEPARTMENT|SCHEDULE_MEETING|SEND_PROPOSAL|FOLLOW_UP", "description": "string", "priority": "low|medium|high", "assignee": "string" }],
+  "email_drafts": [{ "audience": "client|finance|tech|sales|support|management", "subject": "string", "body_md": "string", "context": "string" }],
+  "sales_opportunities": [{ "title": "string", "description": "string", "estimated_value": "low|medium|high", "urgency": "low|medium|high", "recommended_action": "string" }],
+  "client_needs": [{ "need": "string", "importance": "low|medium|high", "solution": "string" }],
+  "objections": [{ "objection": "string", "type": "price|timing|technical|trust|other", "severity": "low|medium|high", "response": "string" }],
+  "business_insights": { "overall_interest": "low|medium|high", "decision_stage": "awareness|consideration|decision|closed", "budget_indicators": "string", "timeline_indicators": "string" }
+}
+
+**FORMATTED REPORT STRUCTURE (for formatted_report field):**
 
 # 📄 Resumo Executivo
 [2-3 sentences providing a high-level overview of the meeting purpose, participants, and main outcome]
@@ -100,72 +160,91 @@ The "formatted_report" MUST follow this EXACT markdown format:
 - [Key takeaway 1]
 - [Key takeaway 2]
 - [Key takeaway 3]
-- [Add more as needed, 3-6 points total]
 
 # ✅ Plano de Ação
-- [ ] [Task 1] — **Responsável:** [Name or "A definir"]
-- [ ] [Task 2] — **Responsável:** [Name or "A definir"]
-- [ ] [Add more tasks as identified]
+- [ ] [Task 1] — **Responsável:** [Name or "A definir"] — **Prioridade:** [Alta/Média/Baixa]
+- [ ] [Task 2] — **Responsável:** [Name or "A definir"] — **Prioridade:** [Alta/Média/Baixa]
 
 # 📊 Análise de Sentimento
+**Pontuação:** [sentiment_score]/100
 **Tom geral:** [Positivo/Neutro/Negativo]
-[1-2 sentences describing the meeting atmosphere, engagement level, and any notable emotional dynamics]
+[1-2 sentences describing the meeting atmosphere]
 
-**STRUCTURED DATA FORMAT:**
-The "structured_data" field must contain:
-- language: ALWAYS "pt" (European Portuguese)
-- sentiment: "positive" | "neutral" | "negative"
-- sentiment_confidence: 0.0-1.0
-- customer: {name, company} - ONLY if explicitly mentioned, otherwise null
-- participants: [{name, role}] - ONLY people explicitly mentioned by name. Empty array if none.
-- meeting: {duration_min}
-- intents: [{type: SEND_EMAIL|NOTIFY_DEPARTMENT|SCHEDULE_MEETING|SEND_PROPOSAL|ASK_INFO|FOLLOW_UP|REQUEST_APPROVAL, description, department?, deadline_iso?, priority: low|medium|high, assignee?}]
-- email_drafts: [{audience: client|finance|tech|sales|support|management|custom, subject, body_md, suggested_recipients?: [], context}] - **ALWAYS end emails with "Com os melhores cumprimentos,\n{{USER_NAME}}"**
-- risks: [{label, severity: low|medium|high, note, mitigation?}]
-- sales_opportunities: [{title, description, product_service, estimated_value: low|medium|high, urgency: low|medium|high, probability: low|medium|high, trigger, recommended_action}]
-- client_needs: [{need, importance: low|medium|high, solution}]
-- objections: [{objection, type: price|timing|technical|trust|other, severity: low|medium|high, response}]
-- business_insights: {overall_interest: low|medium|high, decision_stage: awareness|consideration|decision|closed, budget_indicators, timeline_indicators, competition_mentions, key_influencers}
+# 💼 Oportunidades de Negócio
+- [Opportunity 1]
+- [Opportunity 2]
+
+# ⚠️ Riscos Identificados
+- [Risk 1]
+- [Risk 2]
+
+**SENTIMENT SCORE GUIDELINES:**
+- 0-20: Very negative (angry, critical, complaints)
+- 21-40: Negative (dissatisfied, concerned)
+- 41-60: Neutral (factual, mixed feelings)
+- 61-80: Positive (satisfied, constructive)
+- 81-100: Very positive (enthusiastic, excellent rapport)
 
 **CRITICAL RULES - DO NOT VIOLATE:**
 1. ALL text output MUST be in European Portuguese (pt-PT)
 2. NEVER invent participant names - only include if explicitly stated
-3. NEVER invent customer names or companies - only include if explicitly stated  
+3. NEVER invent customer names or companies - only include if explicitly stated
 4. NEVER invent contact information (emails, phones, addresses)
 5. If no names mentioned, use empty arrays
 6. If customer not mentioned, set to null
-7. **Email signature:** Always end with "Com os melhores cumprimentos,\n{{USER_NAME}}"
+7. **Email signature:** Always end emails with "Com os melhores cumprimentos,\\n{{USER_NAME}}"
 8. Current date reference: ${new Date().toISOString().split('T')[0]}
 9. Timezone: Europe/Lisbon
-10. Be comprehensive - identify ALL actionable items from the conversation`;
+10. Be comprehensive - identify ALL actionable items from the conversation
+11. Return ONLY valid JSON - no markdown code blocks, no extra text`;
 
-    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    console.log('Sending request to OpenAI API...');
+    
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+        'Authorization': `Bearer ${openaiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
+        model: 'gpt-4o-mini',
         messages: [
           { role: 'system', content: systemPrompt },
-          { role: 'user', content: `Analyze this transcript: ${transcript}` }
+          { role: 'user', content: `Analyze this transcript and return the structured JSON: ${transcript}` }
         ],
+        response_format: { type: 'json_object' },
+        max_tokens: 4000,
       }),
     });
 
     if (!response.ok) {
-      console.error('AI Gateway error:', response.status, await response.text());
+      const errorText = await response.text();
+      console.error('OpenAI API error:', response.status, errorText);
       throw new Error('Meeting analysis service temporarily unavailable. Please try again later.');
     }
 
     const data = await response.json();
     let content = data.choices[0].message.content;
     
-    // Remove markdown code blocks if present
+    console.log('OpenAI response received, parsing JSON...');
+    
+    // Remove markdown code blocks if present (safety measure)
     content = content.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
     
-    const parsed = JSON.parse(content);
+    let parsed;
+    try {
+      parsed = JSON.parse(content);
+    } catch (parseError) {
+      console.error('Failed to parse AI response as JSON:', parseError);
+      console.error('Raw content:', content.substring(0, 500));
+      throw new Error('Failed to parse meeting analysis. Please try again.');
+    }
+
+    // Validate required fields exist
+    if (!parsed.summary || typeof parsed.sentiment_score !== 'number') {
+      console.error('Missing required fields in AI response');
+      throw new Error('Invalid analysis response. Please try again.');
+    }
 
     // Replace {{USER_NAME}} placeholder with actual user profile name
     const { data: profile } = await supabaseAdmin
@@ -176,17 +255,7 @@ The "structured_data" field must contain:
     
     const userName = profile?.name || 'A Equipa';
     
-    // Replace placeholder in all email drafts with European Portuguese signature
-    if (parsed.structured_data?.email_drafts && Array.isArray(parsed.structured_data.email_drafts)) {
-      parsed.structured_data.email_drafts = parsed.structured_data.email_drafts.map((draft: any) => ({
-        ...draft,
-        body_md: draft.body_md?.replace(/\{\{USER_NAME\}\}/g, userName)
-          .replace(/\[O Seu Nome\]/gi, userName)
-          .replace(/\[Seu Nome\]/gi, userName)
-          .replace(/\[Your Name\]/gi, userName)
-      }));
-    }
-    // Also handle legacy format if AI returns flat email_drafts
+    // Replace placeholder in all email drafts
     if (parsed.email_drafts && Array.isArray(parsed.email_drafts)) {
       parsed.email_drafts = parsed.email_drafts.map((draft: any) => ({
         ...draft,
@@ -197,14 +266,46 @@ The "structured_data" field must contain:
       }));
     }
 
+    // Ensure arrays exist
+    parsed.opportunities = parsed.opportunities || [];
+    parsed.risks = parsed.risks || [];
+    parsed.action_items = parsed.action_items || [];
+    parsed.topics = parsed.topics || [];
+    parsed.participants = parsed.participants || [];
+    parsed.intents = parsed.intents || [];
+
+    // Convert sentiment_score to sentiment string if not present
+    if (!parsed.sentiment) {
+      if (parsed.sentiment_score >= 61) {
+        parsed.sentiment = 'positive';
+      } else if (parsed.sentiment_score <= 40) {
+        parsed.sentiment = 'negative';
+      } else {
+        parsed.sentiment = 'neutral';
+      }
+    }
+
     // Log rate limit
     await supabaseAdmin.from('rate_limits').insert({
       user_id: user.id,
       action: 'process_meeting',
     });
 
+    console.log('Meeting analysis successful:', {
+      summary_length: parsed.summary?.length,
+      sentiment_score: parsed.sentiment_score,
+      opportunities: parsed.opportunities?.length,
+      risks: parsed.risks?.length,
+      action_items: parsed.action_items?.length,
+      topics: parsed.topics?.length,
+    });
+
+    // Return both structured_data format (for legacy compatibility) and new flat format
     return new Response(
-      JSON.stringify(parsed),
+      JSON.stringify({
+        ...parsed,
+        structured_data: parsed, // For backward compatibility
+      }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error: any) {

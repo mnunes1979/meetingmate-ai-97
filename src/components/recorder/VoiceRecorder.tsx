@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Mic, Square, RotateCcw, Upload } from "lucide-react";
+import { Mic, Square, RotateCcw, Upload, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from "react-i18next";
 
@@ -10,11 +10,114 @@ interface VoiceRecorderProps {
   isProcessing: boolean;
 }
 
+// Compress audio using lower bitrate WebM/Opus
+async function compressAudio(blob: Blob): Promise<Blob> {
+  // If already small enough (< 10MB), return as-is
+  if (blob.size < 10 * 1024 * 1024) {
+    console.log('[Compression] Audio already small enough:', blob.size, 'bytes');
+    return blob;
+  }
+
+  console.log('[Compression] Starting compression, original size:', blob.size, 'bytes');
+  
+  // Create audio context for re-encoding
+  const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+  const arrayBuffer = await blob.arrayBuffer();
+  
+  try {
+    const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+    
+    // Downsample to 16kHz mono for speech (Whisper optimal)
+    const targetSampleRate = 16000;
+    const numberOfChannels = 1;
+    
+    // Create offline context for resampling
+    const offlineContext = new OfflineAudioContext(
+      numberOfChannels,
+      Math.ceil(audioBuffer.duration * targetSampleRate),
+      targetSampleRate
+    );
+    
+    // Create buffer source
+    const source = offlineContext.createBufferSource();
+    source.buffer = audioBuffer;
+    source.connect(offlineContext.destination);
+    source.start(0);
+    
+    // Render to get resampled buffer
+    const renderedBuffer = await offlineContext.startRendering();
+    
+    // Convert to WAV (more efficient for speech than WebM for long recordings)
+    const wavBlob = audioBufferToWav(renderedBuffer);
+    
+    console.log('[Compression] Compressed from', blob.size, 'to', wavBlob.size, 'bytes');
+    audioContext.close();
+    
+    return wavBlob;
+  } catch (error) {
+    console.error('[Compression] Failed to compress, using original:', error);
+    audioContext.close();
+    return blob;
+  }
+}
+
+// Convert AudioBuffer to WAV blob
+function audioBufferToWav(buffer: AudioBuffer): Blob {
+  const numChannels = buffer.numberOfChannels;
+  const sampleRate = buffer.sampleRate;
+  const format = 1; // PCM
+  const bitDepth = 16;
+  
+  const bytesPerSample = bitDepth / 8;
+  const blockAlign = numChannels * bytesPerSample;
+  
+  const samples = buffer.getChannelData(0);
+  const dataLength = samples.length * bytesPerSample;
+  const bufferLength = 44 + dataLength;
+  
+  const arrayBuffer = new ArrayBuffer(bufferLength);
+  const view = new DataView(arrayBuffer);
+  
+  // WAV header
+  writeString(view, 0, 'RIFF');
+  view.setUint32(4, bufferLength - 8, true);
+  writeString(view, 8, 'WAVE');
+  writeString(view, 12, 'fmt ');
+  view.setUint32(16, 16, true); // fmt chunk size
+  view.setUint16(20, format, true);
+  view.setUint16(22, numChannels, true);
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, sampleRate * blockAlign, true);
+  view.setUint16(32, blockAlign, true);
+  view.setUint16(34, bitDepth, true);
+  writeString(view, 36, 'data');
+  view.setUint32(40, dataLength, true);
+  
+  // Write audio data
+  let offset = 44;
+  for (let i = 0; i < samples.length; i++) {
+    const sample = Math.max(-1, Math.min(1, samples[i]));
+    const intSample = sample < 0 ? sample * 0x8000 : sample * 0x7FFF;
+    view.setInt16(offset, intSample, true);
+    offset += 2;
+  }
+  
+  return new Blob([arrayBuffer], { type: 'audio/wav' });
+}
+
+function writeString(view: DataView, offset: number, string: string) {
+  for (let i = 0; i < string.length; i++) {
+    view.setUint8(offset + i, string.charCodeAt(i));
+  }
+}
+
 export const VoiceRecorder = ({ onRecordingComplete, isProcessing }: VoiceRecorderProps) => {
   const [isRecording, setIsRecording] = useState(false);
+  const [isCompressing, setIsCompressing] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
   const [audioURL, setAudioURL] = useState<string | null>(null);
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
+  const [audioSize, setAudioSize] = useState<number>(0);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
@@ -30,22 +133,35 @@ export const VoiceRecorder = ({ onRecordingComplete, isProcessing }: VoiceRecord
 
   const startRecording = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          sampleRate: 16000, // Lower sample rate for speech
+          channelCount: 1, // Mono
+        } 
+      });
       
-      // Try to use the best available codec with fallback
+      // Use low bitrate WebM/Opus for compression
       let mimeType = 'audio/webm;codecs=opus';
-      if (!MediaRecorder.isTypeSupported(mimeType)) {
-        console.warn('audio/webm;codecs=opus not supported, falling back to audio/webm');
+      let options: MediaRecorderOptions = { mimeType };
+      
+      // Try to set lower bitrate if supported
+      if (MediaRecorder.isTypeSupported(mimeType)) {
+        options = { 
+          mimeType,
+          audioBitsPerSecond: 32000 // 32kbps for speech (very compressed)
+        };
+      } else if (MediaRecorder.isTypeSupported('audio/webm')) {
         mimeType = 'audio/webm';
-      }
-      if (!MediaRecorder.isTypeSupported(mimeType)) {
-        console.warn('audio/webm not supported, using default');
-        mimeType = '';
+        options = { mimeType, audioBitsPerSecond: 32000 };
+      } else {
+        console.warn('WebM not supported, using default');
+        options = {};
       }
 
-      const mediaRecorder = new MediaRecorder(stream, 
-        mimeType ? { mimeType } : undefined
-      );
+      const mediaRecorder = new MediaRecorder(stream, options);
+      console.log('[Recorder] Using codec:', mediaRecorder.mimeType, 'with options:', options);
 
       mediaRecorderRef.current = mediaRecorder;
       chunksRef.current = [];
@@ -57,13 +173,13 @@ export const VoiceRecorder = ({ onRecordingComplete, isProcessing }: VoiceRecord
         }
       };
 
-      mediaRecorder.onstop = () => {
-        const blob = new Blob(chunksRef.current, { type: mediaRecorder.mimeType || 'audio/webm' });
-        console.log('[Recorder] Recording stopped, total size:', blob.size, 'bytes, type:', blob.type);
+      mediaRecorder.onstop = async () => {
+        const rawBlob = new Blob(chunksRef.current, { type: mediaRecorder.mimeType || 'audio/webm' });
+        console.log('[Recorder] Recording stopped, raw size:', rawBlob.size, 'bytes, type:', rawBlob.type);
         
         // Validate blob size before allowing upload
-        if (blob.size < 10000) {
-          console.error('[Recorder] Audio too small:', blob.size, 'bytes');
+        if (rawBlob.size < 10000) {
+          console.error('[Recorder] Audio too small:', rawBlob.size, 'bytes');
           toast({
             title: t('recorder.micError'),
             description: t('recorder.audioTooShort', 'Áudio demasiado curto. Por favor, grave pelo menos 5 segundos com voz clara.'),
@@ -73,9 +189,25 @@ export const VoiceRecorder = ({ onRecordingComplete, isProcessing }: VoiceRecord
           return;
         }
         
-        const url = URL.createObjectURL(blob);
-        setAudioURL(url);
-        setAudioBlob(blob);
+        // Compress if needed (for long recordings > 10MB)
+        setIsCompressing(true);
+        try {
+          const compressedBlob = await compressAudio(rawBlob);
+          const url = URL.createObjectURL(compressedBlob);
+          setAudioURL(url);
+          setAudioBlob(compressedBlob);
+          setAudioSize(compressedBlob.size);
+          console.log('[Recorder] Final audio size:', compressedBlob.size, 'bytes');
+        } catch (error) {
+          console.error('[Recorder] Compression error:', error);
+          const url = URL.createObjectURL(rawBlob);
+          setAudioURL(url);
+          setAudioBlob(rawBlob);
+          setAudioSize(rawBlob.size);
+        } finally {
+          setIsCompressing(false);
+        }
+        
         stream.getTracks().forEach(track => track.stop());
       };
 
@@ -113,6 +245,7 @@ export const VoiceRecorder = ({ onRecordingComplete, isProcessing }: VoiceRecord
     if (audioURL) URL.revokeObjectURL(audioURL);
     setAudioURL(null);
     setAudioBlob(null);
+    setAudioSize(0);
     setRecordingTime(0);
   };
 
@@ -147,6 +280,12 @@ export const VoiceRecorder = ({ onRecordingComplete, isProcessing }: VoiceRecord
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const formatSize = (bytes: number) => {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
 
   return (
@@ -185,6 +324,10 @@ export const VoiceRecorder = ({ onRecordingComplete, isProcessing }: VoiceRecord
               <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-destructive/30 flex items-center justify-center">
                 <Mic className="w-10 h-10 sm:w-12 sm:h-12 text-destructive" />
               </div>
+            ) : isCompressing ? (
+              <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-primary/30 flex items-center justify-center">
+                <Loader2 className="w-10 h-10 sm:w-12 sm:h-12 text-primary animate-spin" />
+              </div>
             ) : audioURL ? (
               <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-accent/30 flex items-center justify-center">
                 <Square className="w-10 h-10 sm:w-12 sm:h-12 text-accent fill-accent" />
@@ -195,21 +338,36 @@ export const VoiceRecorder = ({ onRecordingComplete, isProcessing }: VoiceRecord
           </div>
         </div>
 
-        {/* Timer */}
+        {/* Timer and Size */}
         {(isRecording || audioURL) && (
-          <div className="text-2xl sm:text-3xl font-mono font-bold text-primary">
-            {formatTime(recordingTime)}
+          <div className="text-center">
+            <div className="text-2xl sm:text-3xl font-mono font-bold text-primary">
+              {formatTime(recordingTime)}
+            </div>
+            {audioSize > 0 && (
+              <div className="text-sm text-muted-foreground mt-1">
+                {formatSize(audioSize)}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Compression indicator */}
+        {isCompressing && (
+          <div className="text-sm text-muted-foreground flex items-center gap-2">
+            <Loader2 className="w-4 h-4 animate-spin" />
+            A comprimir áudio...
           </div>
         )}
 
         {/* Audio playback */}
-        {audioURL && !isRecording && (
+        {audioURL && !isRecording && !isCompressing && (
           <audio src={audioURL} controls className="w-full max-w-md" />
         )}
 
         {/* Controls */}
         <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 w-full sm:w-auto">
-          {!isRecording && !audioURL && (
+          {!isRecording && !audioURL && !isCompressing && (
             <Button
               size="lg"
               onClick={startRecording}
@@ -233,7 +391,7 @@ export const VoiceRecorder = ({ onRecordingComplete, isProcessing }: VoiceRecord
             </Button>
           )}
 
-          {audioURL && !isRecording && (
+          {audioURL && !isRecording && !isCompressing && (
             <>
               <Button
                 size="lg"
