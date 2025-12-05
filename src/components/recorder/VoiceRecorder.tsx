@@ -317,27 +317,6 @@ export const VoiceRecorder = ({ onRecordingComplete, isProcessing }: VoiceRecord
         </p>
       </div>
 
-      {/* RGPD Consent Checkbox */}
-      <div className="flex items-start space-x-3 p-4 bg-muted/30 rounded-2xl border border-border/30">
-        <Checkbox
-          id="consent"
-          checked={consentGiven}
-          onCheckedChange={(checked) => setConsentGiven(checked === true)}
-          className="mt-0.5"
-        />
-        <div className="flex-1">
-          <Label 
-            htmlFor="consent" 
-            className="text-sm font-medium leading-relaxed cursor-pointer flex items-start gap-2"
-          >
-            <ShieldCheck className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
-            <span>
-              {t('recorder.consentLabel', 'Declaro que tenho o consentimento de todos os participantes para gravar e processar esta reunião, em conformidade com o RGPD.')}
-            </span>
-          </Label>
-        </div>
-      </div>
-
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'record' | 'upload')} className="w-full">
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="record" className="gap-2">
@@ -473,6 +452,27 @@ export const VoiceRecorder = ({ onRecordingComplete, isProcessing }: VoiceRecord
                   </Button>
                 </>
               )}
+            </div>
+
+            {/* RGPD Consent Checkbox - moved below controls */}
+            <div className="flex items-start space-x-3 p-4 bg-muted/30 rounded-2xl border border-border/30 w-full max-w-md">
+              <Checkbox
+                id="consent"
+                checked={consentGiven}
+                onCheckedChange={(checked) => setConsentGiven(checked === true)}
+                className="mt-0.5"
+              />
+              <div className="flex-1">
+                <Label 
+                  htmlFor="consent" 
+                  className="text-sm font-medium leading-relaxed cursor-pointer flex items-start gap-2"
+                >
+                  <ShieldCheck className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
+                  <span>
+                    {t('recorder.consentLabel', 'Declaro que tenho o consentimento de todos os participantes para gravar e processar esta reunião, em conformidade com o RGPD.')}
+                  </span>
+                </Label>
+              </div>
             </div>
           </div>
         </TabsContent>
