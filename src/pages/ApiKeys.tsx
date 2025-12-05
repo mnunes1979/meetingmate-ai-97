@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Eye, EyeOff, Copy, CheckCircle2, AlertCircle, Shield, Edit } from "lucide-react";
+import { ArrowLeft, Eye, EyeOff, Copy, CheckCircle2, AlertCircle, Shield, Edit, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { MobileNav } from "@/components/MobileNav";
 import { Badge } from "@/components/ui/badge";
@@ -51,6 +51,7 @@ const ApiKeys = () => {
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [editingKey, setEditingKey] = useState<string | null>(null);
   const [editValue, setEditValue] = useState<string>("");
+  const [deletingKey, setDeletingKey] = useState<string | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -225,7 +226,7 @@ const ApiKeys = () => {
     if (!editValue.trim()) {
       toast({
         title: t('common.error'),
-        description: t('apiKeys.emptyValue'),
+        description: "Valor da chave é obrigatório",
         variant: "destructive"
       });
       return;
@@ -242,7 +243,7 @@ const ApiKeys = () => {
         headers: {
           Authorization: `Bearer ${session.access_token}`
         },
-        body: { keyName, keyValue: editValue }
+        body: { keyName, keyValue: editValue, action: 'update' }
       });
       
       if (error) throw error;
@@ -252,7 +253,7 @@ const ApiKeys = () => {
       
       toast({
         title: t('common.success'),
-        description: t('apiKeys.keyUpdated'),
+        description: "API key atualizada com sucesso",
       });
       
       // Reload keys to show updated mask
@@ -261,7 +262,43 @@ const ApiKeys = () => {
       console.error('Error updating key:', error);
       toast({
         title: t('common.error'),
-        description: error.message || t('apiKeys.updateError'),
+        description: error.message || "Erro ao atualizar API key",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleDeleteKey = async (keyName: string) => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        throw new Error('No active session');
+      }
+
+      const { data, error } = await supabase.functions.invoke('update-api-key', {
+        headers: {
+          Authorization: `Bearer ${session.access_token}`
+        },
+        body: { keyName, action: 'delete' }
+      });
+      
+      if (error) throw error;
+      
+      setDeletingKey(null);
+      
+      toast({
+        title: t('common.success'),
+        description: "API key apagada com sucesso",
+      });
+      
+      // Reload keys
+      await loadApiKeys();
+    } catch (error: any) {
+      console.error('Error deleting key:', error);
+      toast({
+        title: t('common.error'),
+        description: error.message || "Erro ao apagar API key",
         variant: "destructive"
       });
     }
@@ -270,7 +307,6 @@ const ApiKeys = () => {
   const getCategoryColor = (category: string) => {
     const colors: Record<string, string> = {
       "AI Services": "bg-purple-500/10 text-purple-700 dark:text-purple-300",
-      "Calendar Integration": "bg-blue-500/10 text-blue-700 dark:text-blue-300",
       "Email Services": "bg-green-500/10 text-green-700 dark:text-green-300",
     };
     return colors[category] || "bg-gray-500/10 text-gray-700 dark:text-gray-300";
@@ -308,7 +344,7 @@ const ApiKeys = () => {
               </Button>
               <div className="flex items-center gap-2">
                 <Shield className="w-5 h-5 text-primary" />
-                <h1 className="text-xl md:text-2xl font-bold">{t('apiKeys.title')}</h1>
+                <h1 className="text-xl md:text-2xl font-bold">Gestão de API Keys</h1>
               </div>
             </div>
           </div>
@@ -318,8 +354,8 @@ const ApiKeys = () => {
       <main className="container mx-auto px-4 py-6 md:py-8 max-w-7xl">
         <Card className="mb-6">
           <CardHeader>
-            <CardTitle>{t('apiKeys.overview')}</CardTitle>
-            <CardDescription>{t('apiKeys.description')}</CardDescription>
+            <CardTitle>Visão Geral de API Keys</CardTitle>
+            <CardDescription>Gerir as chaves de API dos serviços integrados</CardDescription>
           </CardHeader>
         </Card>
 
@@ -327,9 +363,11 @@ const ApiKeys = () => {
           <Card key={category} className="mb-6">
             <CardHeader>
               <div className="flex items-center gap-2">
-                <Badge className={getCategoryColor(category)}>{category}</Badge>
+                <Badge className={getCategoryColor(category)}>
+                  {category === 'AI Services' ? 'Serviços de IA' : category === 'Email Services' ? 'Serviços de Email' : category}
+                </Badge>
                 <span className="text-sm text-muted-foreground">
-                  ({keys.length} {keys.length === 1 ? 'key' : 'keys'})
+                  ({keys.length} {keys.length === 1 ? 'chave' : 'chaves'})
                 </span>
               </div>
             </CardHeader>
@@ -337,11 +375,11 @@ const ApiKeys = () => {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>{t('apiKeys.service')}</TableHead>
-                    <TableHead>{t('apiKeys.description')}</TableHead>
-                    <TableHead>{t('apiKeys.value')}</TableHead>
-                    <TableHead>{t('apiKeys.status')}</TableHead>
-                    <TableHead className="text-right">{t('apiKeys.actions')}</TableHead>
+                    <TableHead>Serviço</TableHead>
+                    <TableHead>Descrição</TableHead>
+                    <TableHead>Valor</TableHead>
+                    <TableHead>Estado</TableHead>
+                    <TableHead className="text-right">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -368,17 +406,12 @@ const ApiKeys = () => {
                           {apiKey.exists ? (
                             <Badge variant="outline" className="bg-green-500/10 text-green-700 dark:text-green-300">
                               <CheckCircle2 className="w-3 h-3 mr-1" />
-                              {t('apiKeys.configured')}
+                              Configurado
                             </Badge>
                           ) : (
                             <Badge variant="outline" className="bg-yellow-500/10 text-yellow-700 dark:text-yellow-300">
                               <AlertCircle className="w-3 h-3 mr-1" />
-                              {t('apiKeys.notConfigured')}
-                            </Badge>
-                          )}
-                          {apiKey.readonly && (
-                            <Badge variant="outline" className="ml-2">
-                              {t('apiKeys.readonly')}
+                              Não Configurado
                             </Badge>
                           )}
                         </TableCell>
@@ -394,7 +427,7 @@ const ApiKeys = () => {
                                     disabled={!apiKey.exists}
                                   >
                                     <Eye className="w-4 h-4 mr-1" />
-                                    {t('apiKeys.reveal')}
+                                    Revelar
                                   </Button>
                                 ) : (
                                   <Button
@@ -403,7 +436,7 @@ const ApiKeys = () => {
                                     onClick={() => handleHideKey(apiKey.name)}
                                   >
                                     <EyeOff className="w-4 h-4 mr-1" />
-                                    {t('apiKeys.hide')}
+                                    Ocultar
                                   </Button>
                                 )}
                                 
@@ -430,33 +463,39 @@ const ApiKeys = () => {
                                     {validating === apiKey.name ? (
                                       <div className="animate-spin w-4 h-4 border-2 border-primary border-t-transparent rounded-full" />
                                     ) : (
-                                      t('apiKeys.validate')
+                                      "Validar"
                                     )}
                                   </Button>
                                 )}
 
-                                {!apiKey.readonly && (
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => handleEditKey(apiKey.name)}
-                                  >
-                                    <Edit className="w-4 h-4 mr-1" />
-                                    {t('common.edit')}
-                                  </Button>
-                                )}
-                              </>
-                            ) : (
-                              !apiKey.readonly && (
                                 <Button
-                                  variant="default"
+                                  variant="outline"
                                   size="sm"
                                   onClick={() => handleEditKey(apiKey.name)}
                                 >
                                   <Edit className="w-4 h-4 mr-1" />
-                                  {t('apiKeys.configure')}
+                                  Editar
                                 </Button>
-                              )
+
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                                  onClick={() => setDeletingKey(apiKey.name)}
+                                >
+                                  <Trash2 className="w-4 h-4 mr-1" />
+                                  Apagar
+                                </Button>
+                              </>
+                            ) : (
+                              <Button
+                                variant="default"
+                                size="sm"
+                                onClick={() => handleEditKey(apiKey.name)}
+                              >
+                                <Edit className="w-4 h-4 mr-1" />
+                                Configurar
+                              </Button>
                             )}
                           </div>
                         </TableCell>
@@ -473,13 +512,13 @@ const ApiKeys = () => {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <AlertCircle className="w-5 h-5 text-yellow-600" />
-              {t('apiKeys.securityNotice')}
+              Aviso de Segurança
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2 text-sm text-muted-foreground">
-            <p>• {t('apiKeys.securityNote1')}</p>
-            <p>• {t('apiKeys.securityNote2')}</p>
-            <p>• {t('apiKeys.securityNote3')}</p>
+            <p>• Todas as visualizações e alterações de API keys são registadas</p>
+            <p>• Nunca partilhe as suas API keys com terceiros</p>
+            <p>• Regenere as chaves periodicamente por razões de segurança</p>
           </CardContent>
         </Card>
       </main>
@@ -487,15 +526,15 @@ const ApiKeys = () => {
       <AlertDialog open={!!revealConfirm} onOpenChange={() => setRevealConfirm(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>{t('apiKeys.revealConfirmTitle')}</AlertDialogTitle>
+            <AlertDialogTitle>Revelar API Key</AlertDialogTitle>
             <AlertDialogDescription>
-              {t('apiKeys.revealConfirmDescription')}
+              Tem a certeza que pretende revelar esta API key? Esta ação será registada por razões de segurança.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction onClick={() => revealConfirm && handleRevealKey(revealConfirm)}>
-              {t('apiKeys.reveal')}
+              Revelar
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -504,33 +543,53 @@ const ApiKeys = () => {
       <AlertDialog open={!!editingKey} onOpenChange={() => { setEditingKey(null); setEditValue(""); }}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>{t('apiKeys.editKey')}</AlertDialogTitle>
+            <AlertDialogTitle>Editar API Key</AlertDialogTitle>
             <AlertDialogDescription>
-              {t('apiKeys.editKeyDesc')}
+              Introduza o novo valor para esta API key.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="py-4">
             <Label htmlFor="keyValue" className="text-sm font-medium mb-2 block">
-              {t('apiKeys.newValue')}
+              Novo Valor
             </Label>
             <Input
               id="keyValue"
               type="password"
-              placeholder={t('apiKeys.enterNewValue')}
+              placeholder="Introduza o novo valor..."
               value={editValue}
               onChange={(e) => setEditValue(e.target.value)}
               className="font-mono"
             />
             <p className="text-xs text-muted-foreground mt-2">
-              {t('apiKeys.editWarning')}
+              Após guardar, a API key anterior será substituída permanentemente.
             </p>
           </div>
           <AlertDialogFooter>
             <AlertDialogCancel onClick={() => { setEditingKey(null); setEditValue(""); }}>
-              {t('common.cancel')}
+              Cancelar
             </AlertDialogCancel>
             <AlertDialogAction onClick={() => editingKey && handleSaveKey(editingKey)}>
-              {t('common.save')}
+              Guardar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={!!deletingKey} onOpenChange={() => setDeletingKey(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Apagar API Key</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem a certeza que pretende apagar esta API key? Esta ação é irreversível e a funcionalidade associada deixará de funcionar.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={() => deletingKey && handleDeleteKey(deletingKey)}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Apagar
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

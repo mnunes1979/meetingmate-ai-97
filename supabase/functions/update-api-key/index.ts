@@ -9,7 +9,8 @@ const corsHeaders = {
 
 const updateSchema = z.object({
   keyName: z.string().min(1),
-  keyValue: z.string().min(1),
+  keyValue: z.string().optional(),
+  action: z.enum(['update', 'delete']).default('update'),
 });
 
 const handler = async (req: Request): Promise<Response> => {
@@ -68,12 +69,21 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     const requestData = await req.json();
-    const { keyName, keyValue } = updateSchema.parse(requestData);
+    const { keyName, keyValue, action } = updateSchema.parse(requestData);
 
-    // Check if key is readonly
-    if (keyName === 'LOVABLE_API_KEY' || keyName.startsWith('SUPABASE_')) {
+    // Check if key is readonly (only system keys)
+    if (keyName.startsWith('SUPABASE_')) {
       return new Response(
-        JSON.stringify({ error: 'This key cannot be modified' }),
+        JSON.stringify({ error: 'Esta chave não pode ser modificada' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Allowed keys that can be managed
+    const allowedKeys = ['OPENAI_API_KEY', 'RESEND_API_KEY', 'RESEND_FROM', 'RESEND_WEBHOOK_SECRET'];
+    if (!allowedKeys.includes(keyName)) {
+      return new Response(
+        JSON.stringify({ error: 'Esta chave não pode ser gerida por aqui' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -84,39 +94,60 @@ const handler = async (req: Request): Promise<Response> => {
       throw new Error('Invalid Supabase configuration');
     }
 
-    // Use Supabase Management API to update the secret
-    const managementApiUrl = `https://api.supabase.com/v1/projects/${projectRef}/secrets`;
     const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
-    const updateResponse = await fetch(managementApiUrl, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${serviceRoleKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify([{
-        name: keyName,
-        value: keyValue,
-      }]),
-    });
+    if (action === 'delete') {
+      // Delete the secret
+      const deleteResponse = await fetch(`https://api.supabase.com/v1/projects/${projectRef}/secrets?name=${keyName}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${serviceRoleKey}`,
+        },
+      });
 
-    if (!updateResponse.ok) {
-      const errorData = await updateResponse.text();
-      console.error('Failed to update secret:', errorData);
-      throw new Error('Failed to update API key');
+      if (!deleteResponse.ok) {
+        const errorData = await deleteResponse.text();
+        console.error('Failed to delete secret:', errorData);
+        throw new Error('Falha ao apagar API key');
+      }
+    } else {
+      // Update the secret
+      if (!keyValue) {
+        return new Response(
+          JSON.stringify({ error: 'Valor da chave é obrigatório' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      const updateResponse = await fetch(`https://api.supabase.com/v1/projects/${projectRef}/secrets`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${serviceRoleKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify([{
+          name: keyName,
+          value: keyValue,
+        }]),
+      });
+
+      if (!updateResponse.ok) {
+        const errorData = await updateResponse.text();
+        console.error('Failed to update secret:', errorData);
+        throw new Error('Falha ao atualizar API key');
+      }
     }
 
     // Determine service name
     let serviceName = keyName;
     if (keyName.includes('OPENAI')) serviceName = 'OpenAI';
-    else if (keyName.includes('GOOGLE')) serviceName = 'Google Calendar';
     else if (keyName.includes('RESEND')) serviceName = 'Resend';
 
-    // Log the update action (CRITICAL SECURITY LOG - non-blocking)
+    // Log the action (CRITICAL SECURITY LOG - non-blocking)
     try {
       await supabaseAdmin.from('api_key_audit_logs').insert({
         user_id: userId,
-        action: 'edited',
+        action: action === 'delete' ? 'deleted' : 'edited',
         key_name: keyName,
         service_name: serviceName,
         result: 'success',
@@ -124,7 +155,7 @@ const handler = async (req: Request): Promise<Response> => {
         user_agent: req.headers.get('user-agent')
       });
       
-      console.log(`[SECURITY] API key ${keyName} updated by user ${userEmail ?? userId}`);
+      console.log(`[SECURITY] API key ${keyName} ${action === 'delete' ? 'deleted' : 'updated'} by user ${userEmail ?? userId}`);
     } catch (auditError) {
       console.error('Failed to log audit event:', auditError);
     }
