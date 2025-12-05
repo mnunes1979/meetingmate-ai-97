@@ -19,7 +19,7 @@ i18n
       ca: { translation: ca },
       fr: { translation: fr },
     },
-    fallbackLng: 'ca',
+    fallbackLng: 'pt',
     interpolation: {
       escapeValue: false,
     },

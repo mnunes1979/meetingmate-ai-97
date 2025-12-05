@@ -66,7 +66,7 @@ export const VoiceRecorder = ({ onRecordingComplete, isProcessing }: VoiceRecord
           console.error('[Recorder] Audio too small:', blob.size, 'bytes');
           toast({
             title: t('recorder.micError'),
-            description: 'Àudio massa curt. Si us plau, graveu almenys 5 segons amb veu clara.',
+            description: t('recorder.audioTooShort', 'Áudio demasiado curto. Por favor, grave pelo menos 5 segundos com voz clara.'),
             variant: "destructive",
           });
           stream.getTracks().forEach(track => track.stop());
@@ -137,7 +137,7 @@ export const VoiceRecorder = ({ onRecordingComplete, isProcessing }: VoiceRecord
       console.error('[VoiceRecorder] No audioBlob available!');
       toast({
         title: t('recorder.micError'),
-        description: 'Erro: áudio não disponível. Por favor, grave novamente.',
+        description: t('recorder.audioNotAvailable', 'Erro: áudio não disponível. Por favor, grave novamente.'),
         variant: "destructive",
       });
     }
