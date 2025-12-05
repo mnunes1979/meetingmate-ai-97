@@ -12,30 +12,20 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { Home, FileText, BarChart3, Building2, Users, Settings, Shield, Key, Server, CalendarCheck2 } from "lucide-react";
-import { isFeatureEnabled } from "@/lib/featureFlags";
+import { Home, FileText, BarChart3, Building2, Users, Settings, Shield, Key, Server } from "lucide-react";
 import { useUserAccess } from "@/hooks/useUserAccess";
 
-const baseItems = [
+const items = [
   { title: "Dashboard", url: "/dashboard", icon: Home },
   { title: "Reuniões", url: "/admin", icon: FileText },
   { title: "Analítica de Email", url: "/email-analytics", icon: BarChart3 },
   { title: "Departamentos", url: "/departments", icon: Building2 },
-  { title: "Comerciais", url: "/admin/users", icon: Users },
+  { title: "Utilizadores", url: "/admin/users", icon: Users },
   { title: "Logs de Segurança", url: "/admin/audit-logs", icon: Shield },
   { title: "API Keys", url: "/admin/api-keys", icon: Key },
   { title: "Control Panel", url: "/admin/control-panel", icon: Server },
   { title: "Configurações", url: "/settings", icon: Settings },
 ];
-
-// Add Renewals link if feature is enabled
-const items = isFeatureEnabled('RENEWALS_MODULE_ENABLED')
-  ? [
-      ...baseItems.slice(0, 3), // Dashboard, Reuniões, Email
-      { title: "Renovações", url: "/renewals", icon: CalendarCheck2 },
-      ...baseItems.slice(3), // Rest of items
-    ]
-  : baseItems;
 
 export function AppSidebar() {
   const { state } = useSidebar();
@@ -47,11 +37,9 @@ export function AppSidebar() {
   const filteredItems = useMemo(() => {
     if (loading) return items;
     
+    // For renewals_only users, redirect to settings only
     if (accessType === 'renewals_only') {
-      // Only show Renewals and Settings for renewals_only users
-      return items.filter(item => 
-        item.url === '/renewals' || item.url === '/settings'
-      );
+      return items.filter(item => item.url === '/settings');
     }
     
     return items;

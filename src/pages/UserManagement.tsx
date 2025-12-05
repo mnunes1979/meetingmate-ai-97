@@ -6,38 +6,52 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, UserPlus, Key, UserX, UserCheck } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import { Loader2, UserPlus, Key, UserX, UserCheck, Building2, Plus, Crown, Shield } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 import AdminLayout from "@/components/admin/AdminLayout";
 import { useAuth } from "@/hooks/useAuth";
 
-interface SalesRep {
+interface Department {
+  id: string;
+  name: string;
+}
+
+interface UserProfile {
   id: string;
   email: string;
   name: string;
   active: boolean;
   created_at: string;
-  access_type?: 'full' | 'renewals_only';
+  department_id: string | null;
+  department?: Department;
+  role?: 'admin' | 'sales_rep' | null;
 }
 
 const UserManagement = () => {
   const [user, setUser] = useState<any>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [salesReps, setSalesReps] = useState<SalesRep[]>([]);
+  const [users, setUsers] = useState<UserProfile[]>([]);
+  const [departments, setDepartments] = useState<Department[]>([]);
   const [isCreating, setIsCreating] = useState(false);
-  const [newUser, setNewUser] = useState({ email: "", password: "", name: "" });
+  const [newUser, setNewUser] = useState({ email: "", password: "", name: "", department_id: "", role: "sales_rep" as "admin" | "sales_rep" });
   const [passwordErrors, setPasswordErrors] = useState<string[]>([]);
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
   const [resetUserId, setResetUserId] = useState("");
   const [resetPassword, setResetPassword] = useState("");
   const [resetPasswordErrors, setResetPasswordErrors] = useState<string[]>([]);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [editUser, setEditUser] = useState<{ id: string; name: string; email: string; access_type: 'full' | 'renewals_only' } | null>(null);
+  const [editUser, setEditUser] = useState<{ id: string; name: string; email: string; department_id: string | null } | null>(null);
+  const [newDeptDialogOpen, setNewDeptDialogOpen] = useState(false);
+  const [newDeptName, setNewDeptName] = useState("");
   const navigate = useNavigate();
   const { toast } = useToast();
   const { handleSignOut } = useAuth();
+
+  const SUPER_ADMIN_EMAIL = "mnunes.maciel@gmail.com";
 
   useEffect(() => {
     checkAuth();
@@ -53,6 +67,10 @@ const UserManagement = () => {
 
     setUser(session.user);
 
+    // Check if super admin
+    const isSuperAdminUser = session.user.email === SUPER_ADMIN_EMAIL;
+    setIsSuperAdmin(isSuperAdminUser);
+
     const { data: roleData } = await supabase
       .from("user_roles")
       .select("role")
@@ -63,7 +81,7 @@ const UserManagement = () => {
     if (!roleData) {
       toast({
         title: "Acesso Negado",
-        description: "Apenas administradores podem gerir comerciais.",
+        description: "Apenas administradores podem gerir utilizadores.",
         variant: "destructive",
       });
       navigate("/");
@@ -71,26 +89,52 @@ const UserManagement = () => {
     }
 
     setIsAdmin(true);
-    await loadSalesReps();
+    await Promise.all([loadUsers(), loadDepartments()]);
     setLoading(false);
   };
 
-  const loadSalesReps = async () => {
-    const { data, error } = await supabase
+  const loadUsers = async () => {
+    // Load profiles
+    const { data: profiles, error: profilesError } = await supabase
       .from("profiles")
       .select("*")
       .order("created_at", { ascending: false });
 
-    if (error) {
+    if (profilesError) {
       toast({
         title: "Erro",
-        description: "Erro ao carregar comerciais",
+        description: "Erro ao carregar utilizadores",
         variant: "destructive",
       });
       return;
     }
 
-    setSalesReps(data || []);
+    // Load departments for mapping
+    const { data: depts } = await supabase.from("departments").select("id, name");
+    const deptMap = new Map(depts?.map(d => [d.id, d]) || []);
+
+    // Load roles
+    const { data: roles } = await supabase.from("user_roles").select("user_id, role");
+    const roleMap = new Map(roles?.map(r => [r.user_id, r.role]) || []);
+
+    const usersWithDepts = (profiles || []).map(p => ({
+      ...p,
+      department: p.department_id ? deptMap.get(p.department_id) : undefined,
+      role: roleMap.get(p.id) || null,
+    }));
+
+    setUsers(usersWithDepts);
+  };
+
+  const loadDepartments = async () => {
+    const { data, error } = await supabase
+      .from("departments")
+      .select("id, name")
+      .order("name");
+
+    if (!error && data) {
+      setDepartments(data);
+    }
   };
 
   const validatePassword = (password: string): string[] => {
@@ -126,6 +170,50 @@ const UserManagement = () => {
     }
   };
 
+  const handleCreateDepartment = async () => {
+    if (!newDeptName.trim()) {
+      toast({
+        title: "Erro",
+        description: "O nome do departamento é obrigatório",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Utilizador não autenticado");
+
+      const { data, error } = await supabase
+        .from("departments")
+        .insert({ user_id: user.id, name: newDeptName.trim() })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      toast({
+        title: "Sucesso",
+        description: `Departamento "${newDeptName}" criado com sucesso`,
+      });
+
+      setNewDeptName("");
+      setNewDeptDialogOpen(false);
+      await loadDepartments();
+      
+      // Select the new department
+      if (data) {
+        setNewUser({ ...newUser, department_id: data.id });
+      }
+    } catch (error: any) {
+      toast({
+        title: "Erro",
+        description: error.message || "Erro ao criar departamento",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -153,23 +241,29 @@ const UserManagement = () => {
             "Content-Type": "application/json",
             Authorization: `Bearer ${session?.access_token}`,
           },
-          body: JSON.stringify(newUser),
+          body: JSON.stringify({
+            email: newUser.email,
+            password: newUser.password,
+            name: newUser.name,
+            department_id: newUser.department_id || null,
+            role: newUser.role,
+          }),
         }
       );
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error || "Error en crear l'usuari");
+        throw new Error(error.error || "Erro ao criar utilizador");
       }
 
       toast({
-        title: "Èxit",
-        description: "Comercial creat amb èxit",
+        title: "Sucesso",
+        description: "Utilizador criado com sucesso",
       });
 
-      setNewUser({ email: "", password: "", name: "" });
+      setNewUser({ email: "", password: "", name: "", department_id: "", role: "sales_rep" });
       setPasswordErrors([]);
-      await loadSalesReps();
+      await loadUsers();
     } catch (error: any) {
       toast({
         title: "Erro",
@@ -209,12 +303,12 @@ const UserManagement = () => {
       );
 
       if (!response.ok) {
-        throw new Error("Erro ao resetar password");
+        throw new Error("Erro ao repor password");
       }
 
       toast({
         title: "Sucesso",
-        description: "Password resetada com sucesso",
+        description: "Password reposta com sucesso",
       });
       
       setResetDialogOpen(false);
@@ -254,15 +348,15 @@ const UserManagement = () => {
       );
 
       if (!response.ok) {
-        throw new Error("Error en canviar l'estat");
+        throw new Error("Erro ao alterar estado");
       }
 
       toast({
-        title: "Èxit",
-        description: currentActive ? "Comercial desactivat" : "Comercial activat",
+        title: "Sucesso",
+        description: currentActive ? "Utilizador desativado" : "Utilizador ativado",
       });
 
-      await loadSalesReps();
+      await loadUsers();
     } catch (error: any) {
       toast({
         title: "Erro",
@@ -272,12 +366,12 @@ const UserManagement = () => {
     }
   };
 
-  const openEditDialog = (rep: SalesRep) => {
+  const openEditDialog = (rep: UserProfile) => {
     setEditUser({ 
       id: rep.id, 
       name: rep.name, 
       email: rep.email,
-      access_type: rep.access_type || 'full'
+      department_id: rep.department_id
     });
     setEditDialogOpen(true);
   };
@@ -291,7 +385,7 @@ const UserManagement = () => {
         .update({ 
           name: editUser.name, 
           email: editUser.email,
-          access_type: editUser.access_type
+          department_id: editUser.department_id
         })
         .eq("id", editUser.id);
 
@@ -299,19 +393,29 @@ const UserManagement = () => {
 
       toast({
         title: "Sucesso",
-        description: "Usuário atualizado corretamente",
+        description: "Utilizador atualizado corretamente",
       });
 
       setEditDialogOpen(false);
       setEditUser(null);
-      await loadSalesReps();
+      await loadUsers();
     } catch (error: any) {
       toast({
         title: "Erro",
-        description: error.message || "Erro ao atualizar usuário",
+        description: error.message || "Erro ao atualizar utilizador",
         variant: "destructive",
       });
     }
+  };
+
+  const getRoleBadge = (userProfile: UserProfile) => {
+    if (userProfile.email === SUPER_ADMIN_EMAIL) {
+      return <Badge className="bg-amber-500 hover:bg-amber-600"><Crown className="w-3 h-3 mr-1" />Super Admin</Badge>;
+    }
+    if (userProfile.role === 'admin') {
+      return <Badge variant="default"><Shield className="w-3 h-3 mr-1" />Admin</Badge>;
+    }
+    return <Badge variant="secondary">Utilizador</Badge>;
   };
 
   if (loading) {
@@ -325,27 +429,29 @@ const UserManagement = () => {
   if (!isAdmin) return null;
 
   return (
-    <AdminLayout title="Gestão de Comerciais">
+    <AdminLayout title="Gestão de Utilizadores">
       <div className="max-w-6xl mx-auto space-y-4 sm:space-y-6">
-        {/* Criar novo comercial */}
+        {/* Criar novo utilizador */}
         <Dialog>
           <DialogTrigger asChild>
             <Button className="w-full sm:w-auto" size="sm">
               <UserPlus className="w-4 h-4 mr-2" />
-              Crear Nou Comercial
+              Criar Novo Utilizador
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="max-w-md">
             <DialogHeader>
-              <DialogTitle>Crear Nou Comercial</DialogTitle>
+              <DialogTitle>Criar Novo Utilizador</DialogTitle>
+              <DialogDescription>Preencha os dados do novo utilizador</DialogDescription>
             </DialogHeader>
             <form onSubmit={handleCreateUser} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="name">Nom Complet</Label>
+                <Label htmlFor="name">Nome Completo</Label>
                 <Input
                   id="name"
                   value={newUser.name}
                   onChange={(e) => setNewUser({ ...newUser, name: e.target.value })}
+                  placeholder="Nome do utilizador"
                   required
                 />
               </div>
@@ -356,6 +462,7 @@ const UserManagement = () => {
                   type="email"
                   value={newUser.email}
                   onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
+                  placeholder="email@exemplo.pt"
                   required
                 />
               </div>
@@ -366,6 +473,7 @@ const UserManagement = () => {
                   type="password"
                   value={newUser.password}
                   onChange={(e) => handlePasswordChange(e.target.value, false)}
+                  placeholder="Mínimo 12 caracteres"
                   required
                   minLength={12}
                 />
@@ -380,9 +488,77 @@ const UserManagement = () => {
                   </div>
                 )}
               </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="department">Departamento</Label>
+                <div className="flex gap-2">
+                  <Select 
+                    value={newUser.department_id} 
+                    onValueChange={(value) => setNewUser({ ...newUser, department_id: value })}
+                  >
+                    <SelectTrigger className="flex-1">
+                      <SelectValue placeholder="Selecione um departamento" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">Sem departamento</SelectItem>
+                      {departments.map((dept) => (
+                        <SelectItem key={dept.id} value={dept.id}>{dept.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Dialog open={newDeptDialogOpen} onOpenChange={setNewDeptDialogOpen}>
+                    <DialogTrigger asChild>
+                      <Button type="button" variant="outline" size="icon">
+                        <Plus className="w-4 h-4" />
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Criar Departamento</DialogTitle>
+                        <DialogDescription>Crie um novo departamento para organizar utilizadores</DialogDescription>
+                      </DialogHeader>
+                      <div className="space-y-4">
+                        <div className="space-y-2">
+                          <Label>Nome do Departamento</Label>
+                          <Input 
+                            value={newDeptName} 
+                            onChange={(e) => setNewDeptName(e.target.value)}
+                            placeholder="Ex: Comerciais, Técnicos, Mecânicos..."
+                          />
+                        </div>
+                        <Button onClick={handleCreateDepartment} className="w-full">
+                          Criar Departamento
+                        </Button>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                </div>
+              </div>
+
+              {isSuperAdmin && (
+                <div className="space-y-2">
+                  <Label htmlFor="role">Tipo de Utilizador</Label>
+                  <Select 
+                    value={newUser.role} 
+                    onValueChange={(value: "admin" | "sales_rep") => setNewUser({ ...newUser, role: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="sales_rep">Utilizador</SelectItem>
+                      <SelectItem value="admin">Administrador</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Administradores podem criar e gerir outros utilizadores
+                  </p>
+                </div>
+              )}
+
               <Button type="submit" className="w-full" disabled={isCreating || passwordErrors.length > 0}>
                 {isCreating && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                Crear Comercial
+                Criar Utilizador
               </Button>
             </form>
           </DialogContent>
@@ -392,7 +568,7 @@ const UserManagement = () => {
         <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Editar Usuari</DialogTitle>
+              <DialogTitle>Editar Utilizador</DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
               <div className="space-y-2">
@@ -413,26 +589,21 @@ const UserManagement = () => {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="accessType">Tipo de Acesso</Label>
+                <Label htmlFor="editDepartment">Departamento</Label>
                 <Select 
-                  value={editUser?.access_type || 'full'} 
-                  onValueChange={(value: 'full' | 'renewals_only') => 
-                    setEditUser(editUser ? { ...editUser, access_type: value } : null)
-                  }
+                  value={editUser?.department_id || ""} 
+                  onValueChange={(value) => setEditUser(editUser ? { ...editUser, department_id: value || null } : null)}
                 >
-                  <SelectTrigger id="accessType">
-                    <SelectValue placeholder="Selecione o tipo de acesso" />
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione um departamento" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="full">Acesso Completo</SelectItem>
-                    <SelectItem value="renewals_only">Apenas Renovações</SelectItem>
+                    <SelectItem value="">Sem departamento</SelectItem>
+                    {departments.map((dept) => (
+                      <SelectItem key={dept.id} value={dept.id}>{dept.name}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
-                <p className="text-xs text-muted-foreground">
-                  {editUser?.access_type === 'renewals_only' 
-                    ? 'Este usuário só verá o menu de Renovações' 
-                    : 'Este usuário tem acesso a todas as funcionalidades'}
-                </p>
               </div>
             </div>
             <DialogFooter>
@@ -450,7 +621,7 @@ const UserManagement = () => {
         <Dialog open={resetDialogOpen} onOpenChange={setResetDialogOpen}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Resetar Password</DialogTitle>
+              <DialogTitle>Repor Password</DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
               <div className="space-y-2">
@@ -483,64 +654,72 @@ const UserManagement = () => {
                 onClick={handleResetPassword} 
                 disabled={resetPasswordErrors.length > 0 || !resetPassword}
               >
-                Resetar Password
+                Repor Password
               </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
 
-        {/* Lista de comerciais */}
+        {/* Lista de utilizadores */}
         <div className="space-y-3 sm:space-y-4">
-          <h2 className="text-lg sm:text-xl font-bold">Comerciais ({salesReps.length})</h2>
-          {salesReps.map((rep) => (
+          <h2 className="text-lg sm:text-xl font-bold">Utilizadores ({users.length})</h2>
+          {users.map((rep) => (
             <Card key={rep.id} className={`p-3 sm:p-4 ${!rep.active ? "opacity-50" : ""}`}>
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
                 <div className="flex-1">
-                  <p className="font-bold text-sm sm:text-base">{rep.name}</p>
+                  <div className="flex items-center gap-2 mb-1">
+                    <p className="font-bold text-sm sm:text-base">{rep.name}</p>
+                    {getRoleBadge(rep)}
+                  </div>
                   <p className="text-xs sm:text-sm text-muted-foreground">{rep.email}</p>
+                  {rep.department && (
+                    <div className="flex items-center gap-1 mt-1">
+                      <Building2 className="w-3 h-3 text-muted-foreground" />
+                      <span className="text-xs text-muted-foreground">{rep.department.name}</span>
+                    </div>
+                  )}
                   <p className="text-xs text-muted-foreground mt-1">
-                    Criado: {new Date(rep.created_at).toLocaleDateString()}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    Acesso: {rep.access_type === 'renewals_only' ? 'Apenas Renovações' : 'Completo'}
+                    Criado em {new Date(rep.created_at).toLocaleDateString('pt-PT')}
                   </p>
                 </div>
-                <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                <div className="flex flex-wrap gap-2">
                   <Button
-                    variant="outline"
                     size="sm"
+                    variant="outline"
                     onClick={() => openEditDialog(rep)}
-                    className="w-full sm:w-auto text-xs sm:text-sm"
+                    className="text-xs sm:text-sm"
                   >
                     Editar
                   </Button>
                   <Button
+                    size="sm"
                     variant="outline"
-                    size="sm"
                     onClick={() => openResetDialog(rep.id)}
-                    className="w-full sm:w-auto text-xs sm:text-sm"
+                    className="text-xs sm:text-sm"
                   >
-                    <Key className="w-3 h-3 sm:w-4 sm:h-4 mr-2" />
-                    Resetar Password
+                    <Key className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
+                    Password
                   </Button>
-                  <Button
-                    variant={rep.active ? "destructive" : "default"}
-                    size="sm"
-                    onClick={() => handleToggleActive(rep.id, rep.active)}
-                    className="w-full sm:w-auto text-xs sm:text-sm"
-                  >
-                    {rep.active ? (
-                      <>
-                        <UserX className="w-3 h-3 sm:w-4 sm:h-4 mr-2" />
-                        Desativar
-                      </>
-                    ) : (
-                      <>
-                        <UserCheck className="w-3 h-3 sm:w-4 sm:h-4 mr-2" />
-                        Ativar
-                      </>
-                    )}
-                  </Button>
+                  {rep.email !== SUPER_ADMIN_EMAIL && (
+                    <Button
+                      size="sm"
+                      variant={rep.active ? "destructive" : "default"}
+                      onClick={() => handleToggleActive(rep.id, rep.active)}
+                      className="text-xs sm:text-sm"
+                    >
+                      {rep.active ? (
+                        <>
+                          <UserX className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
+                          Desativar
+                        </>
+                      ) : (
+                        <>
+                          <UserCheck className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
+                          Ativar
+                        </>
+                      )}
+                    </Button>
+                  )}
                 </div>
               </div>
             </Card>
