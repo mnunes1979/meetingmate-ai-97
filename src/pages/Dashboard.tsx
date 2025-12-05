@@ -1,33 +1,63 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useTranslation } from "react-i18next";
 import { supabase } from "@/integrations/supabase/client";
-import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, TrendingUp, Users, Calendar, Mail, BarChart3 } from "lucide-react";
+import { Loader2, BarChart3, Target, TrendingUp, CheckSquare, Users, Calendar, Mail } from "lucide-react";
 import AdminLayout from "@/components/admin/AdminLayout";
+import { MetricCard } from "@/components/dashboard/MetricCard";
+import { SentimentGauge } from "@/components/dashboard/SentimentGauge";
+import { RiskAlertWidget } from "@/components/dashboard/RiskAlertWidget";
+import { SentimentTrendChart } from "@/components/dashboard/SentimentTrendChart";
+import { TopicsBarChart } from "@/components/dashboard/TopicsBarChart";
+import { ActionItemsWidget } from "@/components/dashboard/ActionItemsWidget";
+import { Card } from "@/components/ui/card";
+import { format, subDays, startOfDay, parseISO } from "date-fns";
+
+interface MeetingData {
+  id: string;
+  created_at: string;
+  customer_name: string | null;
+  sentiment: string;
+  sentiment_score: number | null;
+  opportunities: string[] | null;
+  risks: string[] | null;
+  action_items: Array<{ task: string; assignee: string; priority: 'High' | 'Medium' | 'Low' }> | null;
+  topics: string[] | null;
+}
 
 interface DashboardMetrics {
   totalMeetings: number;
+  totalOpportunities: number;
+  avgSentiment: number;
+  pendingActions: number;
   totalEmails: number;
-  totalCalendarEvents: number;
-  activeSalesReps: number;
-  sentimentStats: {
-    positive: number;
-    neutral: number;
-    negative: number;
-  };
-  recentMeetings: Array<{
-    id: string;
-    created_at: string;
-    sales_rep_name: string;
-    customer_name: string;
-    sentiment: string;
+  activeUsers: number;
+  risks: Array<{
+    meetingId: string;
+    meetingDate: string;
+    customerName: string;
+    risk: string;
+    sentimentScore: number;
+  }>;
+  actionItems: Array<{
+    meetingId: string;
+    meetingDate: string;
+    task: string;
+    assignee: string;
+    priority: 'High' | 'Medium' | 'Low';
+  }>;
+  sentimentTrend: Array<{
+    date: string;
+    score: number;
+    count: number;
+  }>;
+  topicsData: Array<{
+    topic: string;
+    count: number;
   }>;
 }
 
 const Dashboard = () => {
-  const { t } = useTranslation();
   const [user, setUser] = useState<any>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -58,8 +88,8 @@ const Dashboard = () => {
 
     if (!roleData) {
       toast({
-        title: t('dashboard.accessDenied', 'Acesso Negado'),
-        description: t('dashboard.adminOnly', 'Apenas os administradores podem aceder ao painel.'),
+        title: "Acesso Negado",
+        description: "Apenas os administradores podem aceder ao painel.",
         variant: "destructive",
       });
       navigate("/");
@@ -73,59 +103,148 @@ const Dashboard = () => {
 
   const loadMetrics = async () => {
     try {
-      // Total de reuniões
-      const { count: meetingsCount } = await supabase
+      // Fetch meetings with new structured data
+      const { data: meetings, error: meetingsError } = await supabase
         .from("meeting_notes")
-        .select("*", { count: "exact", head: true });
+        .select("id, created_at, customer_name, sentiment, sentiment_score, opportunities, risks, action_items, topics")
+        .is("deleted_at", null)
+        .gte("created_at", subDays(new Date(), 30).toISOString())
+        .order("created_at", { ascending: false });
 
-      // Total de emails (conta eventos 'sent')
+      if (meetingsError) throw meetingsError;
+
+      const meetingData = (meetings || []) as MeetingData[];
+
+      // Calculate metrics
+      const totalMeetings = meetingData.length;
+      
+      // Count all opportunities
+      const totalOpportunities = meetingData.reduce((acc, m) => {
+        const opps = m.opportunities as string[] | null;
+        return acc + (opps?.length || 0);
+      }, 0);
+
+      // Calculate average sentiment score
+      const scoresWithValues = meetingData.filter(m => m.sentiment_score !== null);
+      const avgSentiment = scoresWithValues.length > 0
+        ? Math.round(scoresWithValues.reduce((acc, m) => acc + (m.sentiment_score || 0), 0) / scoresWithValues.length)
+        : 50;
+
+      // Collect all action items
+      const allActionItems: DashboardMetrics['actionItems'] = [];
+      meetingData.forEach(m => {
+        const items = m.action_items as Array<{ task: string; assignee: string; priority: 'High' | 'Medium' | 'Low' }> | null;
+        if (items && Array.isArray(items)) {
+          items.forEach(item => {
+            allActionItems.push({
+              meetingId: m.id,
+              meetingDate: m.created_at,
+              task: item.task,
+              assignee: item.assignee || 'A definir',
+              priority: item.priority || 'Medium',
+            });
+          });
+        }
+      });
+
+      // Collect risks from meetings with low sentiment or explicit risks
+      const allRisks: DashboardMetrics['risks'] = [];
+      meetingData.forEach(m => {
+        const risks = m.risks as string[] | null;
+        if (risks && Array.isArray(risks)) {
+          risks.forEach(risk => {
+            allRisks.push({
+              meetingId: m.id,
+              meetingDate: m.created_at,
+              customerName: m.customer_name || 'Cliente não identificado',
+              risk: risk,
+              sentimentScore: m.sentiment_score || 50,
+            });
+          });
+        }
+        // Also flag meetings with very low sentiment
+        if ((m.sentiment_score || 50) < 40 && !risks?.length) {
+          allRisks.push({
+            meetingId: m.id,
+            meetingDate: m.created_at,
+            customerName: m.customer_name || 'Cliente não identificado',
+            risk: 'Cliente com sentimento negativo detetado',
+            sentimentScore: m.sentiment_score || 30,
+          });
+        }
+      });
+
+      // Calculate sentiment trend (group by day)
+      const sentimentByDay = new Map<string, { total: number; count: number }>();
+      meetingData.forEach(m => {
+        if (m.sentiment_score !== null) {
+          const dateKey = format(new Date(m.created_at), 'yyyy-MM-dd');
+          const existing = sentimentByDay.get(dateKey) || { total: 0, count: 0 };
+          sentimentByDay.set(dateKey, {
+            total: existing.total + (m.sentiment_score || 0),
+            count: existing.count + 1,
+          });
+        }
+      });
+
+      const sentimentTrend = Array.from(sentimentByDay.entries())
+        .map(([date, data]) => ({
+          date,
+          score: Math.round(data.total / data.count),
+          count: data.count,
+        }))
+        .sort((a, b) => a.date.localeCompare(b.date));
+
+      // Aggregate topics
+      const topicsCount = new Map<string, number>();
+      meetingData.forEach(m => {
+        const topics = m.topics as string[] | null;
+        if (topics && Array.isArray(topics)) {
+          topics.forEach(topic => {
+            const normalized = topic.trim().toLowerCase();
+            if (normalized) {
+              topicsCount.set(normalized, (topicsCount.get(normalized) || 0) + 1);
+            }
+          });
+        }
+      });
+
+      const topicsData = Array.from(topicsCount.entries())
+        .map(([topic, count]) => ({
+          topic: topic.charAt(0).toUpperCase() + topic.slice(1),
+          count,
+        }))
+        .sort((a, b) => b.count - a.count);
+
+      // Fetch email count
       const { count: emailsCount } = await supabase
         .from("email_events")
         .select("*", { count: "exact", head: true })
         .eq("event_type", "sent");
 
-      // Total de eventos de calendário
-      const { count: calendarCount } = await supabase
-        .from("calendar_events")
-        .select("*", { count: "exact", head: true });
-
-      // Utilizadores activos
-      const { count: activeReps } = await supabase
+      // Fetch active users
+      const { count: activeUsers } = await supabase
         .from("profiles")
         .select("*", { count: "exact", head: true })
         .eq("active", true);
 
-      // Estatísticas de sentimento
-      const { data: meetings } = await supabase
-        .from("meeting_notes")
-        .select("sentiment");
-
-      const sentimentStats = {
-        positive: meetings?.filter(m => m.sentiment === "positive").length || 0,
-        neutral: meetings?.filter(m => m.sentiment === "neutral").length || 0,
-        negative: meetings?.filter(m => m.sentiment === "negative").length || 0,
-      };
-
-      // Reuniões recentes
-      const { data: recentMeetings } = await supabase
-        .from("meeting_notes")
-        .select("id, created_at, sales_rep_name, customer_name, sentiment")
-        .order("created_at", { ascending: false })
-        .limit(5);
-
       setMetrics({
-        totalMeetings: meetingsCount || 0,
+        totalMeetings,
+        totalOpportunities,
+        avgSentiment,
+        pendingActions: allActionItems.length,
         totalEmails: emailsCount || 0,
-        totalCalendarEvents: calendarCount || 0,
-        activeSalesReps: activeReps || 0,
-        sentimentStats,
-        recentMeetings: recentMeetings || [],
+        activeUsers: activeUsers || 0,
+        risks: allRisks.sort((a, b) => a.sentimentScore - b.sentimentScore),
+        actionItems: allActionItems,
+        sentimentTrend,
+        topicsData,
       });
     } catch (error) {
       console.error("Error loading metrics:", error);
       toast({
-        title: t('common.error'),
-        description: t('dashboard.loadError', 'Erro ao carregar as métricas'),
+        title: "Erro",
+        description: "Erro ao carregar as métricas do dashboard",
         variant: "destructive",
       });
     }
@@ -141,118 +260,87 @@ const Dashboard = () => {
 
   if (!isAdmin) return null;
 
+  const getSentimentColor = (score: number) => {
+    if (score >= 70) return "text-sentiment-positive";
+    if (score >= 40) return "text-sentiment-neutral";
+    return "text-sentiment-negative";
+  };
+
   return (
-    <AdminLayout title={t('navigation.dashboard', 'A Minha Área')}>
-      <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6">
-        {/* Métricas principais */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+    <AdminLayout title="Dashboard de Business Intelligence">
+      <div className="max-w-7xl mx-auto space-y-6">
+        {/* Overview Cards */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+          <MetricCard
+            title="Total de Reuniões"
+            value={metrics?.totalMeetings || 0}
+            icon={BarChart3}
+          />
+          <MetricCard
+            title="Oportunidades Detetadas"
+            value={metrics?.totalOpportunities || 0}
+            icon={Target}
+            colorClass="text-sentiment-positive"
+          />
           <Card className="p-4 sm:p-6 card-gradient border-border/50">
             <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs sm:text-sm text-muted-foreground">{t('dashboard.totalMeetings', 'Reuniões')}</p>
-                <p className="text-2xl sm:text-3xl font-bold">{metrics?.totalMeetings}</p>
+              <div className="space-y-1">
+                <p className="text-xs sm:text-sm text-muted-foreground">Sentimento Médio</p>
+                <SentimentGauge score={metrics?.avgSentiment || 50} />
               </div>
-              <BarChart3 className="w-6 h-6 sm:w-8 sm:h-8 text-primary" />
             </div>
           </Card>
-
-          <Card className="p-4 sm:p-6 card-gradient border-border/50">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs sm:text-sm text-muted-foreground">{t('dashboard.totalEmails', 'E-mails')}</p>
-                <p className="text-2xl sm:text-3xl font-bold">{metrics?.totalEmails}</p>
-              </div>
-              <Mail className="w-6 h-6 sm:w-8 sm:h-8 text-primary" />
-            </div>
-          </Card>
-
-          <Card className="p-4 sm:p-6 card-gradient border-border/50">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs sm:text-sm text-muted-foreground">{t('dashboard.totalEvents', 'Eventos')}</p>
-                <p className="text-2xl sm:text-3xl font-bold">{metrics?.totalCalendarEvents}</p>
-              </div>
-              <Calendar className="w-6 h-6 sm:w-8 sm:h-8 text-primary" />
-            </div>
-          </Card>
-
-          <Card className="p-4 sm:p-6 card-gradient border-border/50">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs sm:text-sm text-muted-foreground">{t('dashboard.activeUsers', 'Utilizadores')}</p>
-                <p className="text-2xl sm:text-3xl font-bold">{metrics?.activeSalesReps}</p>
-              </div>
-              <Users className="w-6 h-6 sm:w-8 sm:h-8 text-primary" />
-            </div>
-          </Card>
+          <MetricCard
+            title="Ações Pendentes"
+            value={metrics?.pendingActions || 0}
+            icon={CheckSquare}
+            colorClass={metrics?.pendingActions && metrics.pendingActions > 5 ? "text-amber-500" : undefined}
+          />
         </div>
 
-        {/* Sentimentos */}
-        <Card className="p-4 sm:p-6 card-gradient border-border/50">
-          <h2 className="text-lg sm:text-xl font-bold mb-4 flex items-center gap-2">
-            <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5" />
-            {t('dashboard.sentimentAnalysis', 'Análise de Sentimento')}
-          </h2>
-          <div className="grid grid-cols-3 gap-2 sm:gap-4">
-            <div className="text-center p-3 sm:p-4 rounded-lg bg-sentiment-positive/10">
-              <p className="text-2xl sm:text-4xl font-bold text-sentiment-positive">{metrics?.sentimentStats.positive}</p>
-              <p className="text-xs sm:text-sm text-muted-foreground mt-1 sm:mt-2">{t('dashboard.positive', 'Positivo')}</p>
-            </div>
-            <div className="text-center p-3 sm:p-4 rounded-lg bg-sentiment-neutral/10">
-              <p className="text-2xl sm:text-4xl font-bold text-sentiment-neutral">{metrics?.sentimentStats.neutral}</p>
-              <p className="text-xs sm:text-sm text-muted-foreground mt-1 sm:mt-2">{t('dashboard.neutral', 'Neutro')}</p>
-            </div>
-            <div className="text-center p-3 sm:p-4 rounded-lg bg-sentiment-negative/10">
-              <p className="text-2xl sm:text-4xl font-bold text-sentiment-negative">{metrics?.sentimentStats.negative}</p>
-              <p className="text-xs sm:text-sm text-muted-foreground mt-1 sm:mt-2">{t('dashboard.negative', 'Negativo')}</p>
-            </div>
-          </div>
-        </Card>
+        {/* Secondary Metrics */}
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+          <MetricCard
+            title="E-mails Enviados"
+            value={metrics?.totalEmails || 0}
+            icon={Mail}
+          />
+          <MetricCard
+            title="Utilizadores Ativos"
+            value={metrics?.activeUsers || 0}
+            icon={Users}
+          />
+          <MetricCard
+            title="Alertas de Risco"
+            value={metrics?.risks?.length || 0}
+            icon={TrendingUp}
+            colorClass={metrics?.risks && metrics.risks.length > 0 ? "text-sentiment-negative" : "text-sentiment-positive"}
+          />
+        </div>
 
-        {/* Reuniões recentes */}
-        <Card className="p-4 sm:p-6 card-gradient border-border/50">
-          <h2 className="text-lg sm:text-xl font-bold mb-4">{t('dashboard.recentMeetings', 'Reuniões Recentes')}</h2>
-          <div className="space-y-3">
-            {metrics?.recentMeetings && metrics.recentMeetings.length > 0 ? (
-              metrics.recentMeetings.map((meeting) => (
-                <div 
-                  key={meeting.id} 
-                  className="flex flex-col sm:flex-row justify-between sm:items-center gap-3 p-3 sm:p-4 bg-background/50 rounded-lg border border-border/50 hover:border-primary/50 transition-colors cursor-pointer" 
-                  onClick={() => navigate(`/admin/meeting/${meeting.id}`)}
-                >
-                  <div className="flex-1">
-                    <p className="font-medium text-sm sm:text-base">{meeting.sales_rep_name}</p>
-                    <p className="text-xs sm:text-sm text-muted-foreground">
-                      {meeting.customer_name || t('dashboard.clientNotIdentified', 'Cliente não identificado')}
-                    </p>
-                  </div>
-                  <div className="flex items-center justify-between sm:flex-col sm:items-end gap-2">
-                    <span className={`inline-block px-2 sm:px-3 py-1 rounded-full text-xs font-medium ${
-                      meeting.sentiment === "positive" ? "bg-sentiment-positive/20 text-sentiment-positive" :
-                      meeting.sentiment === "neutral" ? "bg-sentiment-neutral/20 text-sentiment-neutral" :
-                      "bg-sentiment-negative/20 text-sentiment-negative"
-                    }`}>
-                      {meeting.sentiment === "positive" ? t('dashboard.positive', 'Positivo') : 
-                       meeting.sentiment === "neutral" ? t('dashboard.neutral', 'Neutro') : 
-                       t('dashboard.negative', 'Negativo')}
-                    </span>
-                    <p className="text-xs text-muted-foreground">
-                      {new Date(meeting.created_at).toLocaleDateString('pt-PT', {
-                        day: 'numeric',
-                        month: 'short',
-                        year: 'numeric'
-                      })}
-                    </p>
-                  </div>
-                </div>
-              ))
-            ) : (
-              <p className="text-center text-muted-foreground py-8 text-sm">
-                {t('dashboard.noMeetings', 'Ainda não há reuniões registadas')}
-              </p>
-            )}
-          </div>
-        </Card>
+        {/* Charts Row */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+          <SentimentTrendChart 
+            data={metrics?.sentimentTrend || []} 
+            title="Tendência de Sentimento (30 dias)"
+          />
+          <TopicsBarChart 
+            data={metrics?.topicsData || []} 
+            title="Tópicos Mais Discutidos"
+          />
+        </div>
+
+        {/* Action Items and Risks Row */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+          <ActionItemsWidget 
+            items={metrics?.actionItems || []} 
+            title="Ações Pendentes"
+          />
+          <RiskAlertWidget 
+            risks={metrics?.risks || []} 
+            title="Alertas de Risco"
+          />
+        </div>
       </div>
     </AdminLayout>
   );
