@@ -24,27 +24,45 @@ export const MetricCard = ({
   return (
     <Card
       className={cn(
-        "p-4 sm:p-6 card-gradient border-border/50 transition-all",
-        onClick && "cursor-pointer hover:shadow-lg hover:border-primary/50"
+        "widget-card group relative overflow-hidden",
+        onClick && "cursor-pointer"
       )}
       onClick={onClick}
     >
-      <div className="flex items-center justify-between">
-        <div className="space-y-1">
-          <p className="text-xs sm:text-sm text-muted-foreground">{title}</p>
-          <p className={cn("text-2xl sm:text-3xl font-bold", colorClass)}>
+      {/* Subtle gradient overlay */}
+      <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+      
+      <div className="relative flex items-start justify-between">
+        <div className="space-y-3">
+          <p className="text-sm text-muted-foreground font-medium">{title}</p>
+          <p className={cn(
+            "text-3xl sm:text-4xl font-bold tracking-tight",
+            colorClass
+          )}>
             {value}
           </p>
           {trend !== undefined && (
-            <p className={cn(
-              "text-xs",
-              trend > 0 ? "text-sentiment-positive" : trend < 0 ? "text-sentiment-negative" : "text-muted-foreground"
+            <div className={cn(
+              "inline-flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-full",
+              trend > 0 
+                ? "bg-sentiment-positive/10 text-sentiment-positive" 
+                : trend < 0 
+                  ? "bg-sentiment-negative/10 text-sentiment-negative" 
+                  : "bg-muted text-muted-foreground"
             )}>
               {trend > 0 ? "↑" : trend < 0 ? "↓" : "→"} {Math.abs(trend)}% {trendLabel}
-            </p>
+            </div>
           )}
         </div>
-        <Icon className={cn("w-6 h-6 sm:w-8 sm:h-8", colorClass || "text-primary")} />
+        <div className={cn(
+          "p-3 rounded-2xl bg-primary/10 group-hover:bg-primary/15 transition-colors duration-300",
+          colorClass ? "bg-current/10" : ""
+        )}>
+          <Icon className={cn(
+            "w-6 h-6 sm:w-7 sm:h-7",
+            colorClass || "text-primary"
+          )} />
+        </div>
       </div>
     </Card>
   );

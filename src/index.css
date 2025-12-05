@@ -1,105 +1,119 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
-*/
+/* Premium Modernity Design System - Apple-Inspired */
 
 @layer base {
   :root {
-    /* Light mode - minimal use, app is dark-first */
-    --background: 210 20% 98%;
-    --foreground: 215 25% 15%;
+    /* Light mode - Zinc/Neutral palette */
+    --background: 240 5% 96%;
+    --foreground: 240 10% 10%;
     --card: 0 0% 100%;
-    --card-foreground: 215 25% 15%;
+    --card-foreground: 240 10% 10%;
     --popover: 0 0% 100%;
-    --popover-foreground: 215 25% 15%;
-    --primary: 215 90% 55%;
+    --popover-foreground: 240 10% 10%;
+    --primary: 234 85% 60%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 215 15% 92%;
-    --secondary-foreground: 215 25% 15%;
-    --muted: 215 15% 92%;
-    --muted-foreground: 215 15% 45%;
+    --secondary: 240 5% 92%;
+    --secondary-foreground: 240 10% 25%;
+    --muted: 240 5% 92%;
+    --muted-foreground: 240 5% 45%;
     --accent: 160 75% 45%;
     --accent-foreground: 0 0% 100%;
-    --destructive: 0 75% 55%;
+    --destructive: 350 85% 60%;
     --destructive-foreground: 0 0% 100%;
-    --border: 215 15% 88%;
-    --input: 215 15% 88%;
-    --ring: 215 90% 55%;
-    --radius: 0.5rem;
+    --border: 240 5% 90%;
+    --input: 240 5% 90%;
+    --ring: 234 85% 60%;
+    --radius: 1rem;
 
     /* Sentiment colors */
     --sentiment-positive: 142 76% 36%;
     --sentiment-neutral: 45 93% 47%;
-    --sentiment-negative: 0 75% 55%;
+    --sentiment-negative: 350 85% 60%;
 
     /* Priority colors */
     --priority-low: 142 76% 36%;
     --priority-medium: 45 93% 47%;
-    --priority-high: 0 75% 55%;
+    --priority-high: 350 85% 60%;
 
     /* Action type colors */
-    --action-email: 215 90% 55%;
+    --action-email: 234 85% 60%;
 
     /* Status colors */
-    --status-draft: 215 15% 45%;
+    --status-draft: 240 5% 45%;
     --status-sent: 142 76% 36%;
-    --status-error: 0 75% 55%;
+    --status-error: 350 85% 60%;
     --status-processing: 45 93% 47%;
+
+    /* Glass effect variables */
+    --glass-bg: 0 0% 100% / 0.7;
+    --glass-border: 0 0% 100% / 0.2;
+    --glass-shadow: 240 10% 10%;
+
+    /* Shadows */
+    --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.05), 0 1px 2px -1px rgb(0 0 0 / 0.05);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.07), 0 2px 4px -2px rgb(0 0 0 / 0.07);
+    --shadow-lg: 0 10px 25px -3px rgb(0 0 0 / 0.1), 0 4px 10px -4px rgb(0 0 0 / 0.1);
+    --shadow-xl: 0 20px 40px -5px rgb(0 0 0 / 0.12), 0 8px 20px -8px rgb(0 0 0 / 0.12);
+    --shadow-glow: 0 0 30px hsl(234 85% 60% / 0.25);
   }
 
   .dark {
-    /* Dark mode - primary theme */
-    --background: 222 20% 8%;
-    --foreground: 210 20% 98%;
-    --card: 222 18% 11%;
-    --card-foreground: 210 20% 98%;
-    --popover: 222 18% 11%;
-    --popover-foreground: 210 20% 98%;
-    --primary: 215 95% 65%;
-    --primary-foreground: 222 20% 8%;
-    --secondary: 217 15% 18%;
-    --secondary-foreground: 210 20% 98%;
-    --muted: 217 15% 18%;
-    --muted-foreground: 215 15% 60%;
+    /* Dark mode - Deep Zinc palette */
+    --background: 240 10% 4%;
+    --foreground: 0 0% 95%;
+    --card: 240 7% 8%;
+    --card-foreground: 0 0% 95%;
+    --popover: 240 7% 8%;
+    --popover-foreground: 0 0% 95%;
+    --primary: 234 90% 70%;
+    --primary-foreground: 240 10% 4%;
+    --secondary: 240 5% 14%;
+    --secondary-foreground: 0 0% 95%;
+    --muted: 240 5% 14%;
+    --muted-foreground: 240 5% 55%;
     --accent: 160 75% 50%;
-    --accent-foreground: 222 20% 8%;
-    --destructive: 0 75% 60%;
+    --accent-foreground: 240 10% 4%;
+    --destructive: 350 85% 60%;
     --destructive-foreground: 0 0% 100%;
-    --border: 217 15% 20%;
-    --input: 217 15% 20%;
-    --ring: 215 95% 65%;
+    --border: 240 5% 15%;
+    --input: 240 5% 15%;
+    --ring: 234 90% 70%;
 
     /* Sentiment colors (dark mode adjusted) */
     --sentiment-positive: 142 70% 45%;
     --sentiment-neutral: 45 90% 55%;
-    --sentiment-negative: 0 70% 60%;
+    --sentiment-negative: 350 80% 60%;
 
     /* Priority colors (dark mode) */
     --priority-low: 142 70% 45%;
     --priority-medium: 45 90% 55%;
-    --priority-high: 0 70% 60%;
+    --priority-high: 350 80% 60%;
 
     /* Action type colors (dark mode) */
-    --action-email: 215 90% 65%;
+    --action-email: 234 90% 70%;
 
     /* Status colors (dark mode) */
-    --status-draft: 215 15% 55%;
+    --status-draft: 240 5% 55%;
     --status-sent: 142 70% 45%;
-    --status-error: 0 70% 60%;
+    --status-error: 350 80% 60%;
     --status-processing: 45 90% 55%;
 
-    /* Gradients */
-    --gradient-hero: linear-gradient(135deg, hsl(215 95% 65% / 0.1), hsl(160 75% 50% / 0.05));
-    --gradient-card: linear-gradient(180deg, hsl(222 18% 13%), hsl(222 18% 11%));
-    
-    /* Shadows */
-    --shadow-sm: 0 1px 2px 0 hsl(222 20% 5% / 0.3);
-    --shadow-md: 0 4px 6px -1px hsl(222 20% 5% / 0.4);
-    --shadow-lg: 0 10px 15px -3px hsl(222 20% 5% / 0.5);
-    --shadow-glow: 0 0 20px hsl(215 95% 65% / 0.2);
+    /* Glass effect variables (dark) */
+    --glass-bg: 240 10% 4% / 0.7;
+    --glass-border: 0 0% 100% / 0.05;
+    --glass-shadow: 0 0% 0%;
+
+    /* Shadows (dark) */
+    --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.3), 0 1px 2px -1px rgb(0 0 0 / 0.3);
+    --shadow-md: 0 4px 8px -1px rgb(0 0 0 / 0.35), 0 2px 6px -2px rgb(0 0 0 / 0.35);
+    --shadow-lg: 0 10px 25px -3px rgb(0 0 0 / 0.4), 0 4px 10px -4px rgb(0 0 0 / 0.4);
+    --shadow-xl: 0 20px 40px -5px rgb(0 0 0 / 0.5), 0 8px 20px -8px rgb(0 0 0 / 0.5);
+    --shadow-glow: 0 0 40px hsl(234 90% 70% / 0.3);
   }
 }
 
@@ -108,26 +122,108 @@ All colors MUST be HSL.
     @apply border-border;
   }
 
-  body {
-    @apply bg-background text-foreground antialiased;
+  html {
+    font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
   }
 
-  /* Custom scrollbar */
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: 'cv11', 'ss01';
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Custom scrollbar - Apple style */
   ::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
+    width: 10px;
+    height: 10px;
   }
 
   ::-webkit-scrollbar-track {
-    @apply bg-background;
+    @apply bg-transparent;
   }
 
   ::-webkit-scrollbar-thumb {
-    @apply bg-border rounded-md;
+    @apply bg-border/50 rounded-full;
+    border: 3px solid transparent;
+    background-clip: padding-box;
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    @apply bg-muted-foreground;
+    @apply bg-muted-foreground/30;
+  }
+}
+
+@layer components {
+  /* Glassmorphism utilities */
+  .glass {
+    @apply bg-white/70 dark:bg-zinc-950/70 backdrop-blur-xl;
+    border: 1px solid hsl(var(--glass-border));
+  }
+
+  .glass-card {
+    @apply bg-card/80 dark:bg-card/60 backdrop-blur-lg;
+    border: 1px solid hsl(var(--border) / 0.5);
+  }
+
+  /* Bento card style */
+  .bento-card {
+    @apply rounded-3xl bg-card border border-border/50 p-6 sm:p-8;
+    @apply shadow-[var(--shadow-sm)] hover:shadow-[var(--shadow-md)];
+    @apply transition-all duration-300 ease-out;
+  }
+
+  .bento-card:hover {
+    @apply scale-[1.01];
+  }
+
+  /* Widget card - iOS style */
+  .widget-card {
+    @apply rounded-3xl bg-card border border-border/50 p-6;
+    @apply shadow-[var(--shadow-sm)] hover:shadow-[var(--shadow-lg)];
+    @apply transition-all duration-300 ease-out;
+  }
+
+  .widget-card:hover {
+    transform: translateY(-2px);
+  }
+
+  /* Settings list - iOS style */
+  .settings-list {
+    @apply rounded-2xl bg-card border border-border/50 overflow-hidden;
+  }
+
+  .settings-list-item {
+    @apply px-4 py-3 flex items-center justify-between;
+    @apply border-b border-border/30 last:border-b-0;
+    @apply hover:bg-muted/50 transition-colors duration-200;
+  }
+
+  /* Floating header/sidebar */
+  .floating-header {
+    @apply bg-white/70 dark:bg-zinc-950/70 backdrop-blur-xl;
+    @apply border-b border-white/20 dark:border-white/5;
+  }
+
+  .floating-sidebar {
+    @apply bg-white/70 dark:bg-zinc-950/70 backdrop-blur-xl;
+    @apply border-r border-white/20 dark:border-white/5;
+  }
+
+  /* Glow button effect */
+  .btn-glow {
+    @apply relative overflow-hidden;
+  }
+
+  .btn-glow::after {
+    content: '';
+    @apply absolute inset-0 opacity-0 transition-opacity duration-300;
+    background: radial-gradient(circle at center, hsl(var(--primary) / 0.4) 0%, transparent 70%);
+    filter: blur(15px);
+  }
+
+  .btn-glow:hover::after {
+    @apply opacity-100;
   }
 }
 
@@ -137,10 +233,45 @@ All colors MUST be HSL.
   }
 
   .card-gradient {
-    background: var(--gradient-card);
+    background: linear-gradient(180deg, hsl(var(--card)), hsl(var(--card) / 0.95));
   }
 
   .shadow-glow {
     box-shadow: var(--shadow-glow);
+  }
+
+  /* Tracking utilities for headings */
+  .tracking-tighter {
+    letter-spacing: -0.03em;
+  }
+
+  /* Scale interaction */
+  .hover-lift {
+    @apply transition-all duration-300 ease-out;
+  }
+
+  .hover-lift:hover {
+    @apply scale-[1.02] shadow-lg;
+  }
+
+  .hover-scale {
+    @apply transition-transform duration-200 ease-out;
+  }
+
+  .hover-scale:hover {
+    @apply scale-105;
+  }
+
+  /* Micro-interactions */
+  .clickable {
+    @apply cursor-pointer transition-all duration-200;
+  }
+
+  .clickable:hover {
+    @apply opacity-80;
+  }
+
+  .clickable:active {
+    @apply scale-95;
   }
 }

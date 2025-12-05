@@ -309,16 +309,16 @@ export const VoiceRecorder = ({ onRecordingComplete, isProcessing }: VoiceRecord
   };
 
   return (
-    <Card className="p-4 sm:p-6 md:p-8 space-y-4 sm:space-y-6 card-gradient border-border/50">
+    <Card className="p-6 sm:p-8 space-y-6">
       <div className="text-center space-y-2">
-        <h2 className="text-xl sm:text-2xl font-semibold">{t('recorder.title')}</h2>
+        <h2 className="text-xl sm:text-2xl font-semibold tracking-tight">{t('recorder.title')}</h2>
         <p className="text-sm sm:text-base text-muted-foreground">
           {t('recorder.subtitle')}
         </p>
       </div>
 
       {/* RGPD Consent Checkbox */}
-      <div className="flex items-start space-x-3 p-4 bg-muted/50 rounded-lg border border-border/50">
+      <div className="flex items-start space-x-3 p-4 bg-muted/30 rounded-2xl border border-border/30">
         <Checkbox
           id="consent"
           checked={consentGiven}

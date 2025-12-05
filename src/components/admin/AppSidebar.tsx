@@ -48,26 +48,38 @@ export function AppSidebar() {
   const groups = useMemo(() => [{ label: "Admin", entries: filteredItems }], [filteredItems]);
 
   return (
-    <Sidebar className={state === "collapsed" ? "w-14" : "w-60"}>
-      <SidebarContent>
+    <Sidebar 
+      className={`${state === "collapsed" ? "w-14" : "w-64"} floating-sidebar transition-all duration-300`}
+    >
+      <SidebarContent className="py-4">
         {groups.map((group) => (
           <SidebarGroup key={group.label}>
-            <SidebarGroupLabel>{group.label}</SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu>
+            <SidebarGroupLabel className="px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+              {group.label}
+            </SidebarGroupLabel>
+            <SidebarGroupContent className="mt-2">
+              <SidebarMenu className="space-y-1 px-2">
                 {group.entries.map((item) => {
                   const isActive = currentPath === item.url;
                   const Icon = item.icon;
                   return (
                     <SidebarMenuItem key={item.url}>
-                      <SidebarMenuButton asChild isActive={isActive} className="hover:bg-muted/50">
+                      <SidebarMenuButton
+                        asChild
+                        isActive={isActive}
+                        className={`
+                          rounded-xl px-3 py-2.5 transition-all duration-200
+                          hover:bg-muted/50
+                          ${isActive ? 'bg-primary/10 text-primary font-medium shadow-sm' : ''}
+                        `}
+                      >
                         <NavLink
                           to={item.url}
                           end
-                          className="flex items-center"
-                          activeClassName="bg-muted text-primary font-medium"
+                          className="flex items-center gap-3"
+                          activeClassName=""
                         >
-                          <Icon className="mr-2 h-4 w-4" />
+                          <Icon className={`h-5 w-5 ${isActive ? 'text-primary' : 'text-muted-foreground'}`} />
                           <span className="truncate">{item.title}</span>
                         </NavLink>
                       </SidebarMenuButton>
