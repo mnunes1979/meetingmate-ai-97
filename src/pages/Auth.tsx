@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,13 +10,14 @@ import { useToast } from "@/hooks/use-toast";
 import { Mic2, Loader2 } from "lucide-react";
 import { z } from "zod";
 
-const authSchema = z.object({
-  email: z.string().email({ message: "Adreça de correu electrònic no vàlida" }).max(255),
-  password: z.string().min(6, { message: "La contrasenya ha de tenir almenys 6 caràcters" }).max(100),
-});
-
 const Auth = () => {
+  const { t } = useTranslation();
   
+  const authSchema = z.object({
+    email: z.string().email({ message: t('auth.invalidEmail', 'Endereço de email inválido') }).max(255),
+    password: z.string().min(6, { message: t('auth.passwordMinLength', 'A palavra-passe deve ter pelo menos 6 caracteres') }).max(100),
+  });
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   
@@ -76,7 +78,7 @@ const Auth = () => {
       const validation = authSchema.safeParse({ email, password });
       if (!validation.success) {
         toast({
-          title: "Error de Validació",
+          title: t('auth.validationError', 'Erro de Validação'),
           description: validation.error.errors[0].message,
           variant: "destructive",
         });
@@ -88,15 +90,15 @@ const Auth = () => {
 
       if (error) {
         toast({
-          title: "Error d'inici de sessió",
+          title: t('auth.loginError', 'Erro de início de sessão'),
           description: error.message,
           variant: "destructive",
         });
       }
     } catch (error: any) {
       toast({
-        title: "Error",
-        description: error.message || "S'ha produït un error inesperat",
+        title: t('common.error'),
+        description: error.message || t('auth.unexpectedError', 'Ocorreu um erro inesperado'),
         variant: "destructive",
       });
     } finally {
@@ -114,16 +116,16 @@ const Auth = () => {
             </div>
           </div>
           <h1 className="text-3xl font-bold tracking-tight">AfterMeeting</h1>
-          <p className="text-muted-foreground">Iniciar Sessió</p>
+          <p className="text-muted-foreground">{t('auth.login', 'Entrar')}</p>
         </div>
 
         <form onSubmit={handleAuth} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="email">Correu electrònic</Label>
+            <Label htmlFor="email">{t('auth.email', 'Email')}</Label>
             <Input
               id="email"
               type="email"
-              placeholder="vostrecorreu@exemple.cat"
+              placeholder="oseu@email.pt"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
@@ -132,7 +134,7 @@ const Auth = () => {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="password">Contrasenya</Label>
+            <Label htmlFor="password">{t('auth.password', 'Palavra-passe')}</Label>
             <Input
               id="password"
               type="password"
@@ -146,7 +148,7 @@ const Auth = () => {
 
           <Button type="submit" className="w-full" disabled={loading}>
             {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Iniciar Sessió
+            {t('auth.login', 'Entrar')}
           </Button>
         </form>
       </Card>

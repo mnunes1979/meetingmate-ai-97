@@ -11,12 +11,17 @@
     "review": "Revisar"
   },
   "auth": {
-    "login": "Iniciar Sessão",
+    "login": "Entrar",
     "signup": "Registar",
     "logout": "Terminar Sessão",
     "email": "Email",
     "password": "Palavra-passe",
-    "forgotPassword": "Esqueceu-se da palavra-passe?"
+    "forgotPassword": "Esqueceu-se da palavra-passe?",
+    "invalidEmail": "Endereço de email inválido",
+    "passwordMinLength": "A palavra-passe deve ter pelo menos 6 caracteres",
+    "validationError": "Erro de Validação",
+    "loginError": "Erro de início de sessão",
+    "unexpectedError": "Ocorreu um erro inesperado"
   },
   "home": {
     "title": "AfterMeeting",
@@ -148,6 +153,22 @@
     "success": "Sucesso!",
     "successDesc": "A sua nota de reunião foi analisada com sucesso"
   },
+  "errors": {
+    "audioTooShort": "Áudio demasiado curto ou corrompido. Por favor, grave pelo menos 3 segundos de áudio com voz clara.",
+    "authRequired": "Autenticação necessária para transcrever. Inicie sessão.",
+    "authRequiredSave": "Autenticação necessária para guardar a reunião",
+    "noVoiceDetected": "Não foi detetada nenhuma voz no áudio. Por favor, certifique-se de falar claramente durante a gravação.",
+    "processingFailed": "Não foi possível processar a reunião. Tente novamente.",
+    "processingError": "Erro de Processamento",
+    "processingErrorDesc": "Ocorreu um erro durante o processamento",
+    "timeout": "Tempo Esgotado",
+    "timeoutDesc": "A operação demorou demasiado. Por favor, tente gravar um áudio mais curto ou tente novamente.",
+    "rateLimit": "Limite Excedido",
+    "rateLimitDesc": "Foi excedido o limite de pedidos. Por favor, aguarde alguns minutos antes de tentar novamente.",
+    "creditsExhausted": "Créditos Esgotados",
+    "creditsExhaustedDesc": "Os créditos da sua conta esgotaram-se. Por favor, adicione créditos para continuar.",
+    "userMustBeAuth": "O utilizador deve estar autenticado para carregar gravações"
+  },
   "meetingDetail": {
     "title": "Detalhes da Reunião",
     "client": "Cliente:",
@@ -203,7 +224,7 @@
     "signOut": "Terminar Sessão"
   },
   "dashboard": {
-    "title": "Dashboard",
+    "title": "A Minha Área",
     "totalMeetings": "Reuniões",
     "totalEmails": "E-mails",
     "totalEvents": "Eventos",
@@ -214,7 +235,10 @@
     "negative": "Negativo",
     "recentMeetings": "Reuniões Recentes",
     "noMeetings": "Ainda não há reuniões registadas",
-    "clientNotIdentified": "Cliente não identificado"
+    "clientNotIdentified": "Cliente não identificado",
+    "accessDenied": "Acesso Negado",
+    "adminOnly": "Apenas os administradores podem aceder ao painel.",
+    "loadError": "Erro ao carregar as métricas"
   },
   "myMeetings": {
     "title": "As Minhas Reuniões",
@@ -226,7 +250,10 @@
     "email": "Email",
     "emails": "Emails",
     "event": "Evento",
-    "events": "Eventos"
+    "events": "Eventos",
+    "accessRestricted": "Acesso Restrito",
+    "renewalsOnly": "Apenas tem permissão para aceder à área de Renovações",
+    "loadError": "Erro ao carregar as suas reuniões"
   },
   "recorder": {
     "title": "Gravar Nota de Reunião",
@@ -237,7 +264,9 @@
     "retake": "Gravar novamente",
     "process": "Processar Gravação",
     "micError": "Erro do Microfone",
-    "micErrorDesc": "Não é possível aceder ao microfone. Verifique as permissões."
+    "micErrorDesc": "Não é possível aceder ao microfone. Verifique as permissões.",
+    "audioTooShort": "Áudio demasiado curto. Por favor, grave pelo menos 5 segundos com voz clara.",
+    "audioNotAvailable": "Erro: áudio não disponível. Por favor, grave novamente."
   },
   "analytics": {
     "title": "Análise de Emails",

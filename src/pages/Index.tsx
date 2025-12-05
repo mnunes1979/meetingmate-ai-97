@@ -208,7 +208,7 @@ const Index = () => {
       // Validate audio size
       console.log('[Validation] Audio blob size:', audioBlob.size, 'bytes');
       if (audioBlob.size < 1000) {
-        throw new Error('Àudio massa curt o corrupte. Si us plau, graveu almenys 3 segons d\'àudio amb veu clara.');
+        throw new Error(t('errors.audioTooShort', 'Áudio demasiado curto ou corrompido. Por favor, grave pelo menos 3 segundos de áudio com voz clara.'));
       }
 
       // Get mime type from blob
@@ -219,7 +219,7 @@ const Index = () => {
       const { data: { session } } = await supabase.auth.getSession();
       const accessToken = session?.access_token;
       if (!accessToken) {
-        throw new Error('Autenticació requerida per transcriure. Inicieu sessió.');
+        throw new Error(t('errors.authRequired', 'Autenticação necessária para transcrever. Inicie sessão.'));
       }
 
       // Call transcription function with storage path (no base64 encoding needed!)
@@ -245,7 +245,7 @@ const Index = () => {
           }
 
           if (!data?.text || data.text.trim().length === 0) {
-            throw new Error('No s\'ha detectat cap veu a l\'àudio. Si us plau, assegureu-vos de parlar clarament durant la gravació.');
+            throw new Error(t('errors.noVoiceDetected', 'Não foi detetada nenhuma voz no áudio. Por favor, certifique-se de falar claramente durante a gravação.'));
           }
 
           console.log('[Transcription] Success, text length:', data.text.length);
@@ -293,7 +293,7 @@ const Index = () => {
             }
 
             if (!data) {
-              throw new Error('No s\'ha pogut processar la reunió. Torneu-ho a provar.');
+              throw new Error(t('errors.processingFailed', 'Não foi possível processar a reunião. Tente novamente.'));
             }
 
             return data;
@@ -317,7 +317,7 @@ const Index = () => {
         // Get current user
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) {
-          throw new Error('Autenticação necessária para guardar a reunião');
+          throw new Error(t('errors.authRequiredSave', 'Autenticação necessária para guardar a reunião'));
         }
 
         // Save to database
@@ -369,18 +369,18 @@ const Index = () => {
       });
       
       // Show specific error messages based on error type
-      let title = "Error de Processament";
-      let description = error.message || "S'ha produït un error durant el processament";
+      let title = t('errors.processingError', 'Erro de Processamento');
+      let description = error.message || t('errors.processingErrorDesc', 'Ocorreu um erro durante o processamento');
       
       if (error instanceof TimeoutError) {
-        title = "Temps Esgotat";
-        description = "L'operació ha trigat massa. Si us plau, proveu de gravar un àudio més curt o torneu-ho a intentar.";
+        title = t('errors.timeout', 'Tempo Esgotado');
+        description = t('errors.timeoutDesc', 'A operação demorou demasiado. Por favor, tente gravar um áudio mais curto ou tente novamente.');
       } else if (error instanceof RateLimitError) {
-        title = "Límit Excedit";
-        description = "S'ha excedit el límit de peticions. Si us plau, espereu uns minuts abans de tornar-ho a provar.";
+        title = t('errors.rateLimit', 'Limite Excedido');
+        description = t('errors.rateLimitDesc', 'Foi excedido o limite de pedidos. Por favor, aguarde alguns minutos antes de tentar novamente.');
       } else if (error instanceof PaymentRequiredError) {
-        title = "Crèdits Esgotats";
-        description = "Els crèdits del vostre compte s'han esgotat. Si us plau, afegiu crèdits per continuar.";
+        title = t('errors.creditsExhausted', 'Créditos Esgotados');
+        description = t('errors.creditsExhaustedDesc', 'Os créditos da sua conta esgotaram-se. Por favor, adicione créditos para continuar.');
       }
       
       toast({

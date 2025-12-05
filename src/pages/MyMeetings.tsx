@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, FileText, Calendar, User, Building2, LogOut, Mic2, BarChart3, Settings as SettingsIcon } from "lucide-react";
+import { Loader2, FileText, Calendar, User, LogOut, Mic2, BarChart3, Settings as SettingsIcon } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { LanguageSelector } from "@/components/LanguageSelector";
 import { MobileNav } from "@/components/MobileNav";
@@ -71,8 +71,8 @@ const MyMeetings = () => {
         // Redirect renewals_only users to renewals page
         if (profile.access_type === 'renewals_only') {
           toast({
-            title: "Acesso Restrito",
-            description: "Você só tem permissão para acessar a área de Renovações",
+            title: t('myMeetings.accessRestricted', 'Acesso Restrito'),
+            description: t('myMeetings.renewalsOnly', 'Apenas tem permissão para aceder à área de Renovações'),
             variant: "destructive",
           });
           navigate("/renewals");
@@ -110,13 +110,12 @@ const MyMeetings = () => {
     } catch (error: any) {
       console.error("Error loading notes:", error);
       toast({
-        title: "Error",
-        description: "Error loading your meetings",
+        title: t('common.error'),
+        description: t('myMeetings.loadError', 'Erro ao carregar as suas reuniões'),
         variant: "destructive",
       });
     }
   };
-
 
   useEffect(() => {
     if (user) {
@@ -139,9 +138,9 @@ const MyMeetings = () => {
 
   const getSentimentLabel = (sentiment: string) => {
     switch (sentiment) {
-      case 'positive': return 'Positiu';
-      case 'neutral': return 'Neutral';
-      case 'negative': return 'Negatiu';
+      case 'positive': return t('sentiment.positive', 'Positivo');
+      case 'neutral': return t('sentiment.neutral', 'Neutro');
+      case 'negative': return t('sentiment.negative', 'Negativo');
       default: return sentiment;
     }
   };
@@ -162,7 +161,7 @@ const MyMeetings = () => {
             <div className="flex items-center gap-3">
               <MobileNav userEmail={user?.email} accessType={userProfile?.access_type} />
               <div>
-                <h1 className="text-lg md:text-2xl font-bold">Les Meves Reunions</h1>
+                <h1 className="text-lg md:text-2xl font-bold">{t('myMeetings.title', 'As Minhas Reuniões')}</h1>
                 <p className="text-xs md:text-sm text-muted-foreground hidden sm:block">{user?.email}</p>
               </div>
             </div>
@@ -170,19 +169,19 @@ const MyMeetings = () => {
               <ThemeToggle />
               <Button variant="ghost" size="sm" onClick={() => navigate("/")}>
                 <Mic2 className="w-4 h-4 mr-2" />
-                Gravar
+                {t('navigation.recordNote', 'Gravar')}
               </Button>
               <Button variant="ghost" size="sm" onClick={() => navigate("/email-analytics")}>
                 <BarChart3 className="w-4 h-4 mr-2" />
-                Analytics
+                {t('navigation.analytics', 'Análises')}
               </Button>
               <Button variant="ghost" size="sm" onClick={() => navigate("/settings")}>
                 <SettingsIcon className="w-4 h-4 mr-2" />
-                Configuració
+                {t('navigation.settings', 'Definições')}
               </Button>
               <ThemeToggle />
               <LanguageSelector />
-              <Button variant="ghost" size="icon" onClick={handleSignOut} title="Tancar Sessió">
+              <Button variant="ghost" size="icon" onClick={handleSignOut} title={t('navigation.signOut', 'Terminar Sessão')}>
                 <LogOut className="w-5 h-5" />
               </Button>
             </div>
@@ -196,21 +195,21 @@ const MyMeetings = () => {
       <main className="container mx-auto px-3 sm:px-4 py-4 sm:py-8 max-w-6xl">
         <div className="mb-4 sm:mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <h2 className="text-lg sm:text-xl font-semibold">
-            History ({notes.length})
+            {t('myMeetings.history', 'Histórico')} ({notes.length})
           </h2>
           <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto">
             <Select value={dateFilter} onValueChange={setDateFilter}>
               <SelectTrigger className="w-[140px]">
-                <SelectValue placeholder="Filter by date" />
+                <SelectValue placeholder={t('myMeetingsFilters.last7Days', 'Últimos 7 dias')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="7">Last 7 days</SelectItem>
-                <SelectItem value="30">Last 30 days</SelectItem>
-                <SelectItem value="all">All time</SelectItem>
+                <SelectItem value="7">{t('myMeetingsFilters.last7Days', 'Últimos 7 dias')}</SelectItem>
+                <SelectItem value="30">{t('myMeetingsFilters.last30Days', 'Últimos 30 dias')}</SelectItem>
+                <SelectItem value="all">{t('myMeetingsFilters.allTime', 'Todo o tempo')}</SelectItem>
               </SelectContent>
             </Select>
             <Button onClick={() => loadNotes(user.id)} variant="outline" size="sm">
-              Refresh
+              {t('myMeetings.refresh', 'Atualizar')}
             </Button>
           </div>
         </div>
@@ -218,7 +217,7 @@ const MyMeetings = () => {
         {notes.length === 0 ? (
           <Card className="p-6 sm:p-8 text-center">
             <FileText className="w-10 h-10 sm:w-12 sm:h-12 text-muted-foreground mx-auto mb-4" />
-            <p className="text-sm sm:text-base text-muted-foreground">Encara no teniu reunions gravades</p>
+            <p className="text-sm sm:text-base text-muted-foreground">{t('myMeetings.noMeetings', 'Ainda não tem reuniões gravadas')}</p>
           </Card>
         ) : (
           <div className="space-y-3 sm:space-y-4">
@@ -264,7 +263,7 @@ const MyMeetings = () => {
                           
                           {note.sales_rep_name && (
                             <div className="text-xs sm:text-sm text-muted-foreground">
-                              Comercial: {note.sales_rep_name}
+                              {t('myMeetings.salesRep', 'Comercial:')} {note.sales_rep_name}
                             </div>
                           )}
                         </div>
@@ -274,12 +273,12 @@ const MyMeetings = () => {
                         <div className="flex gap-2 flex-wrap pt-2">
                           {emailCount > 0 && (
                             <Badge variant="secondary" className="bg-action-email/10 text-action-email text-xs">
-                              {emailCount} Email{emailCount !== 1 ? 's' : ''}
+                              {emailCount} {emailCount !== 1 ? t('myMeetings.emails', 'Emails') : t('myMeetings.email', 'Email')}
                             </Badge>
                           )}
                           {calendarCount > 0 && (
                             <Badge variant="secondary" className="bg-action-calendar/10 text-action-calendar text-xs">
-                              {calendarCount} Evento{calendarCount !== 1 ? 's' : ''}
+                              {calendarCount} {calendarCount !== 1 ? t('myMeetings.events', 'Eventos') : t('myMeetings.event', 'Evento')}
                             </Badge>
                           )}
                         </div>
@@ -287,7 +286,7 @@ const MyMeetings = () => {
                     </div>
                     
                     <Button variant="ghost" size="sm" className="w-full sm:w-auto text-xs sm:text-sm">
-                      Veure Detalls
+                      {t('myMeetings.viewDetails', 'Ver Detalhes')}
                     </Button>
                   </div>
                 </Card>
