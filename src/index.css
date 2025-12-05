@@ -1,0 +1,150 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
+All colors MUST be HSL.
+*/
+
+@layer base {
+  :root {
+    /* Light mode - minimal use, app is dark-first */
+    --background: 210 20% 98%;
+    --foreground: 215 25% 15%;
+    --card: 0 0% 100%;
+    --card-foreground: 215 25% 15%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 215 25% 15%;
+    --primary: 215 90% 55%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 215 15% 92%;
+    --secondary-foreground: 215 25% 15%;
+    --muted: 215 15% 92%;
+    --muted-foreground: 215 15% 45%;
+    --accent: 160 75% 45%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 75% 55%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 215 15% 88%;
+    --input: 215 15% 88%;
+    --ring: 215 90% 55%;
+    --radius: 0.5rem;
+
+    /* Sentiment colors */
+    --sentiment-positive: 142 76% 36%;
+    --sentiment-neutral: 45 93% 47%;
+    --sentiment-negative: 0 75% 55%;
+
+    /* Priority colors */
+    --priority-low: 142 76% 36%;
+    --priority-medium: 45 93% 47%;
+    --priority-high: 0 75% 55%;
+
+    /* Action type colors */
+    --action-email: 215 90% 55%;
+    --action-calendar: 280 65% 60%;
+    --action-trello: 200 70% 50%;
+
+    /* Status colors */
+    --status-draft: 215 15% 45%;
+    --status-sent: 142 76% 36%;
+    --status-error: 0 75% 55%;
+    --status-processing: 45 93% 47%;
+  }
+
+  .dark {
+    /* Dark mode - primary theme */
+    --background: 222 20% 8%;
+    --foreground: 210 20% 98%;
+    --card: 222 18% 11%;
+    --card-foreground: 210 20% 98%;
+    --popover: 222 18% 11%;
+    --popover-foreground: 210 20% 98%;
+    --primary: 215 95% 65%;
+    --primary-foreground: 222 20% 8%;
+    --secondary: 217 15% 18%;
+    --secondary-foreground: 210 20% 98%;
+    --muted: 217 15% 18%;
+    --muted-foreground: 215 15% 60%;
+    --accent: 160 75% 50%;
+    --accent-foreground: 222 20% 8%;
+    --destructive: 0 75% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 217 15% 20%;
+    --input: 217 15% 20%;
+    --ring: 215 95% 65%;
+
+    /* Sentiment colors (dark mode adjusted) */
+    --sentiment-positive: 142 70% 45%;
+    --sentiment-neutral: 45 90% 55%;
+    --sentiment-negative: 0 70% 60%;
+
+    /* Priority colors (dark mode) */
+    --priority-low: 142 70% 45%;
+    --priority-medium: 45 90% 55%;
+    --priority-high: 0 70% 60%;
+
+    /* Action type colors (dark mode) */
+    --action-email: 215 90% 65%;
+    --action-calendar: 280 60% 65%;
+    --action-trello: 200 65% 55%;
+
+    /* Status colors (dark mode) */
+    --status-draft: 215 15% 55%;
+    --status-sent: 142 70% 45%;
+    --status-error: 0 70% 60%;
+    --status-processing: 45 90% 55%;
+
+    /* Gradients */
+    --gradient-hero: linear-gradient(135deg, hsl(215 95% 65% / 0.1), hsl(160 75% 50% / 0.05));
+    --gradient-card: linear-gradient(180deg, hsl(222 18% 13%), hsl(222 18% 11%));
+    
+    /* Shadows */
+    --shadow-sm: 0 1px 2px 0 hsl(222 20% 5% / 0.3);
+    --shadow-md: 0 4px 6px -1px hsl(222 20% 5% / 0.4);
+    --shadow-lg: 0 10px 15px -3px hsl(222 20% 5% / 0.5);
+    --shadow-glow: 0 0 20px hsl(215 95% 65% / 0.2);
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-background;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-border rounded-md;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-muted-foreground;
+  }
+}
+
+@layer utilities {
+  .text-gradient {
+    @apply bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent;
+  }
+
+  .card-gradient {
+    background: var(--gradient-card);
+  }
+
+  .shadow-glow {
+    box-shadow: var(--shadow-glow);
+  }
+}
