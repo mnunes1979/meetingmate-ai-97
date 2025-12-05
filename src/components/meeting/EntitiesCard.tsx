@@ -78,7 +78,7 @@ export const EntitiesCard = ({
   return (
     <Card className="p-6 space-y-4 card-gradient border-border/50">
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold">Detalls de la Reunió</h3>
+        <h3 className="text-lg font-semibold">Detalhes da Reunião</h3>
         {onUpdate && !isEditing && (
           <Button
             variant="outline"
@@ -120,7 +120,7 @@ export const EntitiesCard = ({
               <User className="w-4 h-4 text-primary" />
             </div>
             <div className="flex-1">
-              <p className="text-sm text-muted-foreground mb-1">Client</p>
+              <p className="text-sm text-muted-foreground mb-1">Cliente</p>
               {isEditing ? (
                 <Input
                   value={editedCustomerName}
@@ -162,9 +162,9 @@ export const EntitiesCard = ({
               <Calendar className="w-4 h-4 text-primary" />
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">Data i Hora</p>
+              <p className="text-sm text-muted-foreground">Data e Hora</p>
               <p className="font-medium">
-                {new Date(meetingDatetime).toLocaleString('en-US', {
+                {new Date(meetingDatetime).toLocaleString('pt-PT', {
                   dateStyle: 'medium',
                   timeStyle: 'short',
                 })}
@@ -179,8 +179,8 @@ export const EntitiesCard = ({
               <Clock className="w-4 h-4 text-primary" />
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">Durada</p>
-              <p className="font-medium">{meetingDuration} minuts</p>
+              <p className="text-sm text-muted-foreground">Duração</p>
+              <p className="font-medium">{meetingDuration} minutos</p>
             </div>
           </div>
         )}
@@ -191,7 +191,7 @@ export const EntitiesCard = ({
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
               <Users className="w-4 h-4 text-muted-foreground" />
-              <p className="text-sm font-medium text-muted-foreground">Participants</p>
+              <p className="text-sm font-medium text-muted-foreground">Participantes</p>
             </div>
             {isEditing && (
               <Button
@@ -200,7 +200,7 @@ export const EntitiesCard = ({
                 onClick={addParticipant}
                 className="h-7 text-xs"
               >
-                + Afegir
+                + Adicionar
               </Button>
             )}
           </div>

@@ -194,7 +194,7 @@ export const EmailActionCard = ({ draft, onCreateDraft, onSend }: EmailActionCar
             <Mail className="w-5 h-5 text-action-email" />
           </div>
           <div>
-            <h3 className="font-semibold">Esborrany de Correu</h3>
+            <h3 className="font-semibold">Rascunho de Email</h3>
             <Badge variant="outline" className={`mt-1 ${getAudienceColor()}`}>
               {draft.audience.charAt(0).toUpperCase() + draft.audience.slice(1)}
             </Badge>
@@ -204,12 +204,12 @@ export const EmailActionCard = ({ draft, onCreateDraft, onSend }: EmailActionCar
 
       <div className="space-y-3">
         <div>
-          <p className="text-sm font-medium text-muted-foreground mb-1">Assumpte</p>
+          <p className="text-sm font-medium text-muted-foreground mb-1">Assunto</p>
           <p className="font-medium">{draft.subject}</p>
         </div>
 
         <div>
-          <p className="text-sm font-medium text-muted-foreground mb-2">Cos</p>
+          <p className="text-sm font-medium text-muted-foreground mb-2">Corpo</p>
           <div className="p-4 rounded-lg bg-background/50 border border-border/50">
             <div className="prose prose-sm dark:prose-invert max-w-none whitespace-pre-wrap">
               {draft.body_md}
@@ -218,16 +218,16 @@ export const EmailActionCard = ({ draft, onCreateDraft, onSend }: EmailActionCar
         </div>
 
         <div className="space-y-3">
-          <p className="text-sm font-medium text-muted-foreground">Destinataris</p>
+          <p className="text-sm font-medium text-muted-foreground">Destinatários</p>
           
           {departments.length > 0 && (
             <div>
               <Label className="text-xs text-muted-foreground mb-1 block">
-                Selecciona un Departament
+                Selecione um Departamento
               </Label>
               <Select value={selectedDeptId} onValueChange={handleDepartmentSelect}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Selecciona departament..." />
+                  <SelectValue placeholder="Selecione departamento..." />
                 </SelectTrigger>
                 <SelectContent>
                   {departments.map((dept) => (
@@ -261,12 +261,12 @@ export const EmailActionCard = ({ draft, onCreateDraft, onSend }: EmailActionCar
           {restrictedRecipients.length > 0 && (
             <div className="p-3 rounded-lg bg-sentiment-negative/10 border border-sentiment-negative/20">
               <p className="text-xs text-sentiment-negative font-medium">
-                ⚠️ {restrictedRecipients.length} destinatari(s) no permès(os) segons la configuració de dominis. Configureu dominis permesos a Configuració.
+                ⚠️ {restrictedRecipients.length} destinatário(s) não permitido(s) segundo a configuração de domínios. Configure os domínios permitidos em Definições.
               </p>
             </div>
           )}
           <Input
-            placeholder="Introduïu adreces de correu electrònic (premeu Enter per afegir)"
+            placeholder="Introduza endereços de email (prima Enter para adicionar)"
             value={recipientInput}
             onChange={(e) => setRecipientInput(e.target.value)}
             onKeyDown={handleKeyDown}
@@ -283,7 +283,7 @@ export const EmailActionCard = ({ draft, onCreateDraft, onSend }: EmailActionCar
           className="gap-2"
         >
           <FileText className="w-4 h-4" />
-          Crear Esborrany
+          Criar Rascunho
         </Button>
         <Button
           onClick={() => onSend(recipients)}
@@ -291,7 +291,7 @@ export const EmailActionCard = ({ draft, onCreateDraft, onSend }: EmailActionCar
           className="gap-2"
         >
           <Send className="w-4 h-4" />
-          Enviar Ara
+          Enviar Agora
         </Button>
       </div>
     </Card>

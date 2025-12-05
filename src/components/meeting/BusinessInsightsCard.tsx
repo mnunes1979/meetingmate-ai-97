@@ -60,10 +60,10 @@ export const BusinessInsightsCard = ({ clientNeeds, objections, businessInsights
 
   const getStageLabel = (stage: string) => {
     switch (stage) {
-      case "awareness": return "Consciència";
-      case "consideration": return "Consideració";
-      case "decision": return "Decisió";
-      case "closed": return "Tancat";
+      case "awareness": return "Consciencialização";
+      case "consideration": return "Consideração";
+      case "decision": return "Decisão";
+      case "closed": return "Fechado";
       default: return stage;
     }
   };
@@ -75,7 +75,7 @@ export const BusinessInsightsCard = ({ clientNeeds, objections, businessInsights
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-lg">
           <Lightbulb className="h-5 w-5 text-primary" />
-          Insights de Negoci
+          Insights de Negócio
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -84,13 +84,13 @@ export const BusinessInsightsCard = ({ clientNeeds, objections, businessInsights
           <div className="space-y-3 p-4 bg-muted/50 rounded-lg border">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <span className="text-sm font-medium text-muted-foreground">Interès General:</span>
+                <span className="text-sm font-medium text-muted-foreground">Interesse Geral:</span>
                 <p className={`font-semibold ${getInterestColor(businessInsights.overall_interest)}`}>
-                  {businessInsights.overall_interest === "high" ? "Alt" : businessInsights.overall_interest === "medium" ? "Mitjà" : "Baix"}
+                  {businessInsights.overall_interest === "high" ? "Alto" : businessInsights.overall_interest === "medium" ? "Médio" : "Baixo"}
                 </p>
               </div>
               <div>
-                <span className="text-sm font-medium text-muted-foreground">Fase de Decisió:</span>
+                <span className="text-sm font-medium text-muted-foreground">Fase de Decisão:</span>
                 <p className="font-semibold text-foreground">{getStageLabel(businessInsights.decision_stage)}</p>
               </div>
             </div>
@@ -99,7 +99,7 @@ export const BusinessInsightsCard = ({ clientNeeds, objections, businessInsights
               <div>
                 <span className="text-sm font-medium text-muted-foreground flex items-center gap-1">
                   <DollarSign className="h-4 w-4" />
-                  Indicadors de Pressupost:
+                  Indicadores de Orçamento:
                 </span>
                 <p className="text-sm text-foreground mt-1">{businessInsights.budget_indicators}</p>
               </div>
@@ -109,7 +109,7 @@ export const BusinessInsightsCard = ({ clientNeeds, objections, businessInsights
               <div>
                 <span className="text-sm font-medium text-muted-foreground flex items-center gap-1">
                   <Clock className="h-4 w-4" />
-                  Indicadors de Termini:
+                  Indicadores de Prazo:
                 </span>
                 <p className="text-sm text-foreground mt-1">{businessInsights.timeline_indicators}</p>
               </div>
@@ -119,7 +119,7 @@ export const BusinessInsightsCard = ({ clientNeeds, objections, businessInsights
               <div>
                 <span className="text-sm font-medium text-muted-foreground flex items-center gap-1">
                   <Trophy className="h-4 w-4" />
-                  Competència:
+                  Concorrência:
                 </span>
                 <p className="text-sm text-foreground mt-1">{businessInsights.competition_mentions}</p>
               </div>
@@ -129,7 +129,7 @@ export const BusinessInsightsCard = ({ clientNeeds, objections, businessInsights
               <div>
                 <span className="text-sm font-medium text-muted-foreground flex items-center gap-1">
                   <Users className="h-4 w-4" />
-                  Decisors Clau:
+                  Decisores-Chave:
                 </span>
                 <p className="text-sm text-foreground mt-1">{businessInsights.key_influencers}</p>
               </div>
@@ -140,7 +140,7 @@ export const BusinessInsightsCard = ({ clientNeeds, objections, businessInsights
         {/* Client Needs */}
         {clientNeeds && clientNeeds.length > 0 && (
           <div className="space-y-3">
-            <h4 className="font-semibold text-foreground">Necessitats del Client</h4>
+            <h4 className="font-semibold text-foreground">Necessidades do Cliente</h4>
             <div className="space-y-2">
               {clientNeeds.map((need, index) => (
                 <div key={index} className="p-3 rounded-lg border bg-card">
@@ -163,21 +163,21 @@ export const BusinessInsightsCard = ({ clientNeeds, objections, businessInsights
         {/* Objections */}
         {objections && objections.length > 0 && (
           <div className="space-y-3">
-            <h4 className="font-semibold text-foreground">Objeccions i Preocupacions</h4>
+            <h4 className="font-semibold text-foreground">Objeções e Preocupações</h4>
             <div className="space-y-2">
               {objections.map((objection, index) => (
                 <div key={index} className={`p-3 rounded-lg border ${getSeverityColor(objection.severity)}`}>
                   <div className="flex items-start justify-between gap-2 mb-2">
                     <p className="text-sm font-medium">{objection.objection}</p>
                     <Badge variant="outline" className="text-xs">
-                      {objection.type === "price" ? "Preu" : 
-                       objection.type === "timing" ? "Termini" :
-                       objection.type === "technical" ? "Tècnic" :
-                       objection.type === "trust" ? "Confiança" : "Altre"}
+                      {objection.type === "price" ? "Preço" : 
+                       objection.type === "timing" ? "Prazo" :
+                       objection.type === "technical" ? "Técnico" :
+                       objection.type === "trust" ? "Confiança" : "Outro"}
                     </Badge>
                   </div>
                   <div className="p-2 bg-background/50 rounded text-xs">
-                    <span className="font-medium">Resposta suggerida: </span>
+                    <span className="font-medium">Resposta sugerida: </span>
                     {objection.response}
                   </div>
                 </div>
