@@ -10,6 +10,7 @@ import {
   ResponsiveContainer,
   ReferenceLine,
 } from "recharts";
+import type { RechartsTooltipProps } from "@/types/meeting";
 
 interface DataPoint {
   date: string;
@@ -37,17 +38,18 @@ export const SentimentTrendChart = ({
     return "#ef4444"; // red
   };
 
-  const CustomTooltip = ({ active, payload, label }: any) => {
+  const CustomTooltip = ({ active, payload, label }: RechartsTooltipProps<DataPoint, number>) => {
     if (active && payload && payload.length) {
       const score = payload[0].value;
+      const dataPoint = payload[0].payload;
       return (
         <div className="bg-popover border border-border rounded-lg p-3 shadow-lg">
-          <p className="text-sm font-medium">{formatDate(label)}</p>
+          <p className="text-sm font-medium">{formatDate(label || '')}</p>
           <p className="text-lg font-bold" style={{ color: getColor(score) }}>
             {score}/100
           </p>
           <p className="text-xs text-muted-foreground">
-            {payload[0].payload.count} reunião(ões)
+            {dataPoint.count} reunião(ões)
           </p>
         </div>
       );

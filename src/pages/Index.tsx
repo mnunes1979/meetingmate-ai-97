@@ -18,6 +18,13 @@ import { MobileNav } from "@/components/MobileNav";
 import { LanguageSelector } from "@/components/LanguageSelector";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { retryWithBackoff, parseEdgeFunctionError, TimeoutError, RateLimitError, PaymentRequiredError } from "@/lib/retry";
+import logger from "@/lib/logger";
+
+interface UserProfile {
+  name: string | null;
+  email: string;
+  access_type: 'full' | 'renewals_only';
+}
 
 interface ProcessedMeeting {
   language: string;
@@ -30,13 +37,14 @@ interface ProcessedMeeting {
     action_items: string[];
   };
   sentiment: 'positive' | 'neutral' | 'negative';
+  sentiment_score?: number;
   sentiment_confidence?: number;
   customer?: { name?: string; company?: string };
   participants: Array<{ name: string; role?: string }>;
   meeting?: { datetime_iso?: string; duration_min?: number };
-  intents: any[];
+  intents: Array<{ intent: string; confidence: string }>;
   email_drafts: Array<{ audience: 'client' | 'finance' | 'tech' | 'sales' | 'support' | 'management' | 'custom'; subject: string; body_md: string; suggested_recipients?: string[]; context?: string }>;
-  risks: any[];
+  risks: Array<{ description: string; severity: string; mitigation?: string }>;
   sales_opportunities?: Array<{
     title: string;
     description: string;
@@ -66,6 +74,16 @@ interface ProcessedMeeting {
     competition_mentions: string;
     key_influencers: string;
   };
+  action_items?: Array<{ task?: string; title?: string; assignee?: string; priority?: string }>;
+  topics?: string[];
+  opportunities?: Array<{ title: string; description: string }>;
+}
+
+interface EmailDraft {
+  audience: string;
+  subject: string;
+  body_md: string;
+  suggested_recipients?: string[];
 }
 
 const Index = () => {
@@ -75,7 +93,7 @@ const Index = () => {
   const [processedMeeting, setProcessedMeeting] = useState<ProcessedMeeting | null>(null);
   const [currentNoteId, setCurrentNoteId] = useState<string | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [userProfile, setUserProfile] = useState<any>(null);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -154,38 +172,39 @@ const Index = () => {
 
 
   const handleRecordingComplete = async (audioBlob: Blob) => {
-    console.log('[handleRecordingComplete] START - audioBlob size:', audioBlob.size, 'type:', audioBlob.type);
+    logger.log('[handleRecordingComplete] START - audioBlob size:', audioBlob.size, 'type:', audioBlob.type);
     try {
       setProcessingStep('upload');
-      console.log('[handleRecordingComplete] Processing step set to upload');
+      logger.log('[handleRecordingComplete] Processing step set to upload');
 
       // Validate audio size first
-      console.log('[Validation] Audio blob size:', audioBlob.size, 'bytes');
+      logger.log('[Validation] Audio blob size:', audioBlob.size, 'bytes');
       if (audioBlob.size < 1000) {
         throw new Error(t('errors.audioTooShort', 'Áudio demasiado curto ou corrompido. Por favor, grave pelo menos 3 segundos de áudio com voz clara.'));
       }
 
       // Get current user for secure file storage with timeout
-      console.log('[Auth] Getting session...');
-      let currentSession: any = null;
+      logger.log('[Auth] Getting session...');
+      let currentSession: { user: { id: string } } | null = null;
       try {
         const sessionPromise = supabase.auth.getSession();
         const sessionTimeoutPromise = new Promise<never>((_, reject) => {
           setTimeout(() => reject(new Error('Session timeout')), 10000);
         });
-        const { data, error: sessionError } = await Promise.race([sessionPromise, sessionTimeoutPromise]) as any;
+        const result = await Promise.race([sessionPromise, sessionTimeoutPromise]);
+        const { data, error: sessionError } = result as { data: { session: typeof currentSession }; error: Error | null };
         
         if (sessionError) {
-          console.error('[Auth] Session error:', sessionError);
+          logger.error('[Auth] Session error:', sessionError);
           throw new Error('Erro de autenticação. Por favor, faça login novamente.');
         }
         currentSession = data?.session;
-      } catch (authError: any) {
-        console.error('[Auth] Failed to get session:', authError);
+      } catch (authError: unknown) {
+        logger.error('[Auth] Failed to get session:', authError);
         throw new Error('Erro de autenticação. Por favor, recarregue a página e faça login novamente.');
       }
       
-      console.log('[Auth] Session check:', { 
+      logger.log('[Auth] Session check:', { 
         hasSession: !!currentSession, 
         hasUser: !!currentSession?.user 
       });
@@ -208,7 +227,7 @@ const Index = () => {
       const filePath = `${currentSession.user.id}/${fileName}`;
       
       // Upload audio with timeout to prevent hanging
-      console.log('[Upload] starting upload to storage', { filePath, blobSize: audioBlob.size });
+      logger.log('[Upload] starting upload to storage', { filePath, blobSize: audioBlob.size });
       
       try {
         const uploadResult = await Promise.race([
@@ -224,13 +243,14 @@ const Index = () => {
         ]);
         
         if ('error' in uploadResult && uploadResult.error) {
-          console.error('[Upload] failed:', uploadResult.error);
+          logger.error('[Upload] failed:', uploadResult.error);
           throw new Error(`Falha no upload: ${uploadResult.error.message}`);
         }
-        console.log('[Upload] success');
-      } catch (uploadErr: any) {
-        console.error('[Upload] exception:', uploadErr);
-        throw new Error(uploadErr.message || 'Falha ao carregar áudio. Tente novamente.');
+        logger.log('[Upload] success');
+      } catch (uploadErr: unknown) {
+        const err = uploadErr as Error;
+        logger.error('[Upload] exception:', uploadErr);
+        throw new Error(err.message || 'Falha ao carregar áudio. Tente novamente.');
       }
 
       const { data: { publicUrl } } = supabase.storage
@@ -241,7 +261,7 @@ const Index = () => {
 
       // Get mime type from blob
       const mimeType = audioBlob.type || 'audio/webm';
-      console.log('[Transcribe] Audio mime type:', mimeType);
+      logger.log('[Transcribe] Audio mime type:', mimeType);
 
       // Ensure authenticated and get access token
       const { data: { session } } = await supabase.auth.getSession();
@@ -251,7 +271,7 @@ const Index = () => {
       }
 
       // Call transcription function with storage path (no base64 encoding needed!)
-      console.log('[Transcribe] Calling edge function with storage path:', filePath);
+      logger.log('[Transcribe] Calling edge function with storage path:', filePath);
       const transcriptData = await retryWithBackoff(
         async (signal) => {
           const { data, error } = await supabase.functions.invoke('transcribe-audio', {
@@ -276,7 +296,7 @@ const Index = () => {
             throw new Error(t('errors.noVoiceDetected', 'Não foi detetada nenhuma voz no áudio. Por favor, certifique-se de falar claramente durante a gravação.'));
           }
 
-          console.log('[Transcription] Success, text length:', data.text.length);
+          logger.log('[Transcription] Success, text length:', data.text.length);
           return data;
         },
         {
@@ -284,7 +304,7 @@ const Index = () => {
           initialDelayMs: 2000,
           timeoutMs: 90000, // 90 seconds
           onRetry: (attempt, error) => {
-            console.log(`Transcription retry attempt ${attempt}:`, error.message);
+            logger.log(`Transcription retry attempt ${attempt}:`, error.message);
             toast({
               title: t('common.loading'),
               description: t('retry.transcribing', { attempt }),
@@ -331,7 +351,7 @@ const Index = () => {
             initialDelayMs: 2000,
             timeoutMs: 90000, // 90 seconds
             onRetry: (attempt, error) => {
-              console.log(`Processing retry attempt ${attempt}:`, error.message);
+              logger.log(`Processing retry attempt ${attempt}:`, error.message);
               toast({
                 title: t('common.loading'),
                 description: t('retry.processing', { attempt }),
@@ -390,19 +410,19 @@ const Index = () => {
 
         setTimeout(() => setProcessingStep(null), 2000);
 
-    } catch (error: any) {
-      console.error("[handleRecordingComplete] ERROR:", error);
-      console.error("[handleRecordingComplete] Error stack:", error?.stack);
-      console.error("[handleRecordingComplete] Error details:", {
-        name: error?.name,
-        message: error?.message,
-        code: error?.code,
-        status: error?.status
+    } catch (error: unknown) {
+      const err = error as Error & { code?: string; status?: number };
+      logger.error("[handleRecordingComplete] ERROR:", error);
+      logger.error("[handleRecordingComplete] Error details:", {
+        name: err?.name,
+        message: err?.message,
+        code: err?.code,
+        status: err?.status
       });
       
       // Show specific error messages based on error type
       let title = t('errors.processingError', 'Erro de Processamento');
-      let description = error.message || t('errors.processingErrorDesc', 'Ocorreu um erro durante o processamento');
+      let description = err.message || t('errors.processingErrorDesc', 'Ocorreu um erro durante o processamento');
       
       if (error instanceof TimeoutError) {
         title = t('errors.timeout', 'Tempo Esgotado');
