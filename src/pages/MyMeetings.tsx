@@ -5,12 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, FileText, Calendar, User, LogOut, Mic2, BarChart3, LayoutDashboard, Target, AlertTriangle, CheckSquare, ListTodo, AlertCircle, Search, Filter } from "lucide-react";
+import { Loader2, FileText, Calendar, User, Target, AlertTriangle, CheckSquare, AlertCircle, Search, Filter, Mic2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { NotificationBadge } from "@/components/NotificationBadge";
-import { ThemeToggle } from "@/components/ThemeToggle";
-import { MobileNav } from "@/components/MobileNav";
-import { useAuth } from "@/hooks/useAuth";
+import AdminLayout from "@/components/admin/AdminLayout";
 import { format, subDays } from "date-fns";
 import {
   Select,
@@ -47,7 +44,6 @@ const MyMeetings = () => {
   const [userProfile, setUserProfile] = useState<any>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { handleSignOut } = useAuth();
 
   useEffect(() => {
     checkAuth();
@@ -191,48 +187,8 @@ const MyMeetings = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b border-border/50 backdrop-blur-sm sticky top-0 z-10 bg-background/80">
-        <div className="container mx-auto px-4 py-3 md:py-4">
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <MobileNav userEmail={user?.email} accessType={userProfile?.access_type} />
-              <div>
-                <h1 className="text-lg md:text-2xl font-bold">As Minhas Reuniões</h1>
-                <p className="text-xs md:text-sm text-muted-foreground hidden sm:block">{user?.email}</p>
-              </div>
-            </div>
-            <div className="hidden md:flex items-center gap-2">
-              <Button variant="ghost" size="sm" onClick={() => navigate("/")}>
-                <Mic2 className="w-4 h-4 mr-2" />
-                Gravar
-              </Button>
-              <Button variant="ghost" size="sm" onClick={() => navigate("/tasks")}>
-                <ListTodo className="w-4 h-4 mr-2" />
-                Tarefas
-              </Button>
-              <Button variant="ghost" size="sm" onClick={() => navigate("/email-analytics")}>
-                <BarChart3 className="w-4 h-4 mr-2" />
-                Análises
-              </Button>
-              <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard")}>
-                <LayoutDashboard className="w-4 h-4 mr-2" />
-                Dashboard
-              </Button>
-              <NotificationBadge />
-              <ThemeToggle />
-              <Button variant="ghost" size="icon" onClick={handleSignOut} title="Terminar Sessão">
-                <LogOut className="w-5 h-5" />
-              </Button>
-            </div>
-            <div className="md:hidden">
-              <ThemeToggle />
-            </div>
-          </div>
-        </div>
-      </header>
-
-      <main className="container mx-auto px-3 sm:px-4 py-4 sm:py-8 max-w-6xl">
+    <AdminLayout title="As Minhas Reuniões">
+      <div className="max-w-6xl mx-auto space-y-6">
         {/* Filters */}
         <div className="mb-4 sm:mb-6 space-y-3">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
@@ -407,8 +363,8 @@ const MyMeetings = () => {
             })}
           </div>
         )}
-      </main>
-    </div>
+      </div>
+    </AdminLayout>
   );
 };
 

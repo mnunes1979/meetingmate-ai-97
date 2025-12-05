@@ -92,7 +92,7 @@ const handler = async (req: Request): Promise<Response> => {
         category: key.category,
         exists: hasValue,
         maskedValue,
-        canValidate: key.key_name === 'OPENAI_API_KEY' || key.key_name === 'RESEND_API_KEY',
+        canValidate: key.key_name === 'OPENAI_API_KEY' || key.key_name === 'RESEND_API_KEY' || key.key_name === 'DEEPGRAM_API_KEY',
         readonly: false,
       };
     });

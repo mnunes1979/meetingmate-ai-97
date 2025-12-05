@@ -4,9 +4,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Eye, EyeOff, Copy, CheckCircle2, AlertCircle, Shield, Edit, Trash2 } from "lucide-react";
+import { Eye, EyeOff, Copy, CheckCircle2, AlertCircle, Edit, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { MobileNav } from "@/components/MobileNav";
+import AdminLayout from "@/components/admin/AdminLayout";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -328,30 +328,8 @@ const ApiKeys = () => {
   }, {} as Record<string, ApiKeyInfo[]>);
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b border-border/50 backdrop-blur-sm sticky top-0 z-10 bg-background/80">
-        <div className="container mx-auto px-4 py-3 md:py-4">
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <MobileNav userEmail={user?.email} />
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => navigate("/admin")}
-                className="hidden md:flex"
-              >
-                <ArrowLeft className="w-5 h-5" />
-              </Button>
-              <div className="flex items-center gap-2">
-                <Shield className="w-5 h-5 text-primary" />
-                <h1 className="text-xl md:text-2xl font-bold">Gestão de API Keys</h1>
-              </div>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      <main className="container mx-auto px-4 py-6 md:py-8 max-w-7xl">
+    <AdminLayout title="Gestão de API Keys">
+      <div className="space-y-6">
         <Card className="mb-6">
           <CardHeader>
             <CardTitle>Visão Geral de API Keys</CardTitle>
@@ -521,7 +499,7 @@ const ApiKeys = () => {
             <p>• Regenere as chaves periodicamente por razões de segurança</p>
           </CardContent>
         </Card>
-      </main>
+      </div>
 
       <AlertDialog open={!!revealConfirm} onOpenChange={() => setRevealConfirm(null)}>
         <AlertDialogContent>
@@ -594,7 +572,7 @@ const ApiKeys = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </AdminLayout>
   );
 };
 
