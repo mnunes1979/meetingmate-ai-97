@@ -492,15 +492,15 @@ const UserManagement = () => {
               <div className="space-y-2">
                 <Label htmlFor="department">Departamento</Label>
                 <div className="flex gap-2">
-                  <Select 
-                    value={newUser.department_id} 
-                    onValueChange={(value) => setNewUser({ ...newUser, department_id: value })}
+                <Select 
+                  value={newUser.department_id || "__none__"} 
+                  onValueChange={(value) => setNewUser({ ...newUser, department_id: value === "__none__" ? "" : value })}
                   >
                     <SelectTrigger className="flex-1">
                       <SelectValue placeholder="Selecione um departamento" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Sem departamento</SelectItem>
+                      <SelectItem value="__none__">Sem departamento</SelectItem>
                       {departments.map((dept) => (
                         <SelectItem key={dept.id} value={dept.id}>{dept.name}</SelectItem>
                       ))}
@@ -591,14 +591,14 @@ const UserManagement = () => {
               <div className="space-y-2">
                 <Label htmlFor="editDepartment">Departamento</Label>
                 <Select 
-                  value={editUser?.department_id || ""} 
-                  onValueChange={(value) => setEditUser(editUser ? { ...editUser, department_id: value || null } : null)}
+                  value={editUser?.department_id || "__none__"} 
+                  onValueChange={(value) => setEditUser(editUser ? { ...editUser, department_id: value === "__none__" ? null : value } : null)}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione um departamento" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Sem departamento</SelectItem>
+                    <SelectItem value="__none__">Sem departamento</SelectItem>
                     {departments.map((dept) => (
                       <SelectItem key={dept.id} value={dept.id}>{dept.name}</SelectItem>
                     ))}
