@@ -10,6 +10,7 @@ import {
   ResponsiveContainer,
   Cell,
 } from "recharts";
+import type { RechartsTooltipProps } from "@/types/meeting";
 
 interface TopicData {
   topic: string;
@@ -33,11 +34,12 @@ export const TopicsBarChart = ({
   data, 
   title = "Tópicos Mais Discutidos" 
 }: TopicsBarChartProps) => {
-  const CustomTooltip = ({ active, payload }: any) => {
+  const CustomTooltip = ({ active, payload }: RechartsTooltipProps<TopicData, number>) => {
     if (active && payload && payload.length) {
+      const dataPoint = payload[0].payload;
       return (
         <div className="bg-popover border border-border rounded-lg p-3 shadow-lg">
-          <p className="text-sm font-medium">{payload[0].payload.topic}</p>
+          <p className="text-sm font-medium">{dataPoint.topic}</p>
           <p className="text-lg font-bold text-primary">
             {payload[0].value} menção(ões)
           </p>

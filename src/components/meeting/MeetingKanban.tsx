@@ -1,11 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
-import { GripVertical, Clock, CheckCircle2, AlertCircle, Plus, Trash2, UserPlus } from "lucide-react";
+import { GripVertical, Clock, CheckCircle2, AlertCircle, Plus, Trash2 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -23,6 +23,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import type { ActionItem } from "@/types/meeting";
 
 interface Task {
   id: string;
@@ -42,15 +43,17 @@ interface TeamMember {
 
 interface MeetingKanbanProps {
   meetingId: string;
-  actionItems: any[];
+  actionItems: (ActionItem | string)[];
   userId: string;
 }
 
+type ColumnStatus = 'todo' | 'in_progress' | 'done';
+
 const COLUMNS = [
-  { id: 'todo', title: 'A Fazer', icon: Clock, color: 'text-muted-foreground' },
-  { id: 'in_progress', title: 'Em Progresso', icon: AlertCircle, color: 'text-amber-500' },
-  { id: 'done', title: 'Concluído', icon: CheckCircle2, color: 'text-sentiment-positive' },
-] as const;
+  { id: 'todo' as const, title: 'A Fazer', icon: Clock, color: 'text-muted-foreground' },
+  { id: 'in_progress' as const, title: 'Em Progresso', icon: AlertCircle, color: 'text-amber-500' },
+  { id: 'done' as const, title: 'Concluído', icon: CheckCircle2, color: 'text-sentiment-positive' },
+];
 
 export const MeetingKanban = ({ meetingId, actionItems, userId }: MeetingKanbanProps) => {
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -91,7 +94,7 @@ export const MeetingKanban = ({ meetingId, actionItems, userId }: MeetingKanbanP
   const importActionItems = async () => {
     if (actionItems.length === 0) return;
 
-    const tasksToCreate = actionItems.map((item: any) => ({
+    const tasksToCreate = actionItems.map((item) => ({
       user_id: userId,
       meeting_id: meetingId,
       title: typeof item === 'string' ? item : item.task || item.title || 'Tarefa',
@@ -105,30 +108,44 @@ export const MeetingKanban = ({ meetingId, actionItems, userId }: MeetingKanbanP
     
     if (error) {
       toast({ title: "Erro", description: "Erro ao importar tarefas", variant: "destructive" });
-    } else {
+    } else if (data) {
       setTasks(prev => [...prev, ...(data as Task[])]);
       toast({ title: "Importado", description: `${data.length} tarefa(s) importada(s)` });
     }
   };
 
-  const handleDragStart = (task: Task) => setDraggedTask(task);
+  const handleDragStart = useCallback((task: Task) => setDraggedTask(task), []);
 
-  const handleDrop = async (status: 'todo' | 'in_progress' | 'done') => {
+  // Optimistic UI update with rollback on error
+  const handleDrop = useCallback(async (status: ColumnStatus) => {
     if (!draggedTask || draggedTask.status === status) {
       setDraggedTask(null);
       return;
     }
 
+    const previousStatus = draggedTask.status;
+    const taskId = draggedTask.id;
+
+    // Optimistic update - immediately update UI
+    setTasks(prev => prev.map(t => t.id === taskId ? { ...t, status } : t));
+    setDraggedTask(null);
+
+    // Perform database update
     const { error } = await supabase
       .from("tasks")
       .update({ status })
-      .eq("id", draggedTask.id);
+      .eq("id", taskId);
 
-    if (!error) {
-      setTasks(prev => prev.map(t => t.id === draggedTask.id ? { ...t, status } : t));
+    // Rollback on error
+    if (error) {
+      setTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: previousStatus } : t));
+      toast({
+        title: "Erro",
+        description: "Não foi possível atualizar a tarefa. Tente novamente.",
+        variant: "destructive",
+      });
     }
-    setDraggedTask(null);
-  };
+  }, [draggedTask, toast]);
 
   const handleCreateTask = async () => {
     if (!newTask.title.trim()) return;

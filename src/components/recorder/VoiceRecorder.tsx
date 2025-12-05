@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Mic, Square, RotateCcw, Upload, Loader2, ShieldCheck } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from "react-i18next";
+import logger from "@/lib/logger";
 
 interface VoiceRecorderProps {
   onRecordingComplete: (audioBlob: Blob) => void;
@@ -16,11 +17,11 @@ interface VoiceRecorderProps {
 async function compressAudio(blob: Blob): Promise<Blob> {
   // If already small enough (< 10MB), return as-is
   if (blob.size < 10 * 1024 * 1024) {
-    console.log('[Compression] Audio already small enough:', blob.size, 'bytes');
+    logger.log('[Compression] Audio already small enough:', blob.size, 'bytes');
     return blob;
   }
 
-  console.log('[Compression] Starting compression, original size:', blob.size, 'bytes');
+  logger.log('[Compression] Starting compression, original size:', blob.size, 'bytes');
   
   // Create audio context for re-encoding
   const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
@@ -52,12 +53,12 @@ async function compressAudio(blob: Blob): Promise<Blob> {
     // Convert to WAV (more efficient for speech than WebM for long recordings)
     const wavBlob = audioBufferToWav(renderedBuffer);
     
-    console.log('[Compression] Compressed from', blob.size, 'to', wavBlob.size, 'bytes');
+    logger.log('[Compression] Compressed from', blob.size, 'to', wavBlob.size, 'bytes');
     audioContext.close();
     
     return wavBlob;
   } catch (error) {
-    console.error('[Compression] Failed to compress, using original:', error);
+    logger.error('[Compression] Failed to compress, using original:', error);
     audioContext.close();
     return blob;
   }
@@ -159,30 +160,30 @@ export const VoiceRecorder = ({ onRecordingComplete, isProcessing }: VoiceRecord
         mimeType = 'audio/webm';
         options = { mimeType, audioBitsPerSecond: 32000 };
       } else {
-        console.warn('WebM not supported, using default');
+        logger.warn('WebM not supported, using default');
         options = {};
       }
 
       const mediaRecorder = new MediaRecorder(stream, options);
-      console.log('[Recorder] Using codec:', mediaRecorder.mimeType, 'with options:', options);
+      logger.log('[Recorder] Using codec:', mediaRecorder.mimeType, 'with options:', options);
 
       mediaRecorderRef.current = mediaRecorder;
       chunksRef.current = [];
 
       mediaRecorder.ondataavailable = (e) => {
         if (e.data.size > 0) {
-          console.log('[Recorder] Chunk received:', e.data.size, 'bytes');
+          logger.log('[Recorder] Chunk received:', e.data.size, 'bytes');
           chunksRef.current.push(e.data);
         }
       };
 
       mediaRecorder.onstop = async () => {
         const rawBlob = new Blob(chunksRef.current, { type: mediaRecorder.mimeType || 'audio/webm' });
-        console.log('[Recorder] Recording stopped, raw size:', rawBlob.size, 'bytes, type:', rawBlob.type);
+        logger.log('[Recorder] Recording stopped, raw size:', rawBlob.size, 'bytes, type:', rawBlob.type);
         
         // Validate blob size before allowing upload
         if (rawBlob.size < 10000) {
-          console.error('[Recorder] Audio too small:', rawBlob.size, 'bytes');
+          logger.error('[Recorder] Audio too small:', rawBlob.size, 'bytes');
           toast({
             title: t('recorder.micError'),
             description: t('recorder.audioTooShort', 'Áudio demasiado curto. Por favor, grave pelo menos 5 segundos com voz clara.'),
@@ -200,9 +201,9 @@ export const VoiceRecorder = ({ onRecordingComplete, isProcessing }: VoiceRecord
           setAudioURL(url);
           setAudioBlob(compressedBlob);
           setAudioSize(compressedBlob.size);
-          console.log('[Recorder] Final audio size:', compressedBlob.size, 'bytes');
+          logger.log('[Recorder] Final audio size:', compressedBlob.size, 'bytes');
         } catch (error) {
-          console.error('[Recorder] Compression error:', error);
+          logger.error('[Recorder] Compression error:', error);
           const url = URL.createObjectURL(rawBlob);
           setAudioURL(url);
           setAudioBlob(rawBlob);
@@ -224,7 +225,7 @@ export const VoiceRecorder = ({ onRecordingComplete, isProcessing }: VoiceRecord
       }, 1000);
 
     } catch (error) {
-      console.error("Error accessing microphone:", error);
+      logger.error("Error accessing microphone:", error);
       toast({
         title: t('recorder.micError'),
         description: t('recorder.micErrorDesc'),
@@ -265,12 +266,12 @@ export const VoiceRecorder = ({ onRecordingComplete, isProcessing }: VoiceRecord
   };
 
   const handleProcess = () => {
-    console.log('[VoiceRecorder] handleProcess called, audioBlob exists:', !!audioBlob, 'size:', audioBlob?.size);
+    logger.log('[VoiceRecorder] handleProcess called, audioBlob exists:', !!audioBlob, 'size:', audioBlob?.size);
     if (audioBlob) {
-      console.log('[VoiceRecorder] Calling onRecordingComplete with blob');
+      logger.log('[VoiceRecorder] Calling onRecordingComplete with blob');
       onRecordingComplete(audioBlob);
     } else {
-      console.error('[VoiceRecorder] No audioBlob available!');
+      logger.error('[VoiceRecorder] No audioBlob available!');
       toast({
         title: t('recorder.micError'),
         description: t('recorder.audioNotAvailable', 'Erro: áudio não disponível. Por favor, grave novamente.'),
