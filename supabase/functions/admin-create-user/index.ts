@@ -100,12 +100,19 @@ serve(async (req) => {
       throw new Error('Failed to create user');
     }
 
-    // Update profile with department_id if provided
-    if (department_id) {
-      await supabaseAdmin
-        .from('profiles')
-        .update({ department_id })
-        .eq('id', newUser.user.id);
+    // Create or update profile (trigger may not fire for admin-created users)
+    const { error: profileError } = await supabaseAdmin
+      .from('profiles')
+      .upsert({
+        id: newUser.user.id,
+        email: email,
+        name: name,
+        department_id: department_id || null,
+      }, { onConflict: 'id' });
+
+    if (profileError) {
+      console.error('Error creating profile:', profileError);
+      // Don't throw - user was created, profile can be created later
     }
 
     // Create role entry
