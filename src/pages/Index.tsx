@@ -13,12 +13,11 @@ import { EmailActionCard } from "@/components/actions/EmailActionCard";
 import { SalesOpportunitiesCard } from "@/components/meeting/SalesOpportunitiesCard";
 import { BusinessInsightsCard } from "@/components/meeting/BusinessInsightsCard";
 import { useToast } from "@/hooks/use-toast";
-import { Mic2, LogIn, Building2, FileText, BarChart3 } from "lucide-react";
+import { Mic2, LogIn } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { MobileNav } from "@/components/MobileNav";
-import { ThemeToggle } from "@/components/ThemeToggle";
 import { retryWithBackoff, parseEdgeFunctionError, TimeoutError, RateLimitError, PaymentRequiredError } from "@/lib/retry";
 import logger from "@/lib/logger";
+import AdminLayout from "@/components/admin/AdminLayout";
 
 interface UserProfile {
   name: string | null;
@@ -761,190 +760,62 @@ const Index = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Floating Glass Header */}
-      <header className="floating-header sticky top-0 z-50">
-        <div className="container mx-auto px-4 sm:px-6 py-4">
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <MobileNav isAdmin={isAdmin} userEmail={userProfile?.email} accessType={userProfile?.access_type} />
-              <div className="p-2.5 rounded-2xl bg-primary/10">
-                <Mic2 className="w-6 h-6 text-primary" />
-              </div>
-              <div>
-                <h1 className="text-lg sm:text-xl font-semibold tracking-tight">AfterMeeting</h1>
-                <p className="text-sm text-muted-foreground hidden sm:block">{salesRepName}</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-1 sm:gap-2">
-              {isAuthenticated && (
-                <>
-                  {/* Show different menu options based on access_type */}
-                  {userProfile?.access_type === 'renewals_only' ? (
-                    <>
-                      {/* Only Renewals and Settings for renewals_only users */}
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => navigate("/renewals")}
-                        className="gap-2 hidden md:flex"
-                      >
-                        <FileText className="w-4 h-4" />
-                        Renovações
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => navigate("/dashboard")}
-                        className="gap-2 hidden md:flex"
-                      >
-                        <BarChart3 className="w-4 h-4" />
-                        Dashboard
-                      </Button>
-                    </>
-                  ) : (
-                    <>
-                      {/* Full access menu */}
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => navigate("/my-meetings")}
-                        className="gap-2 hidden md:flex"
-                      >
-                        <FileText className="w-4 h-4" />
-                        {t('home.myMeetings')}
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => navigate("/email-analytics")}
-                        className="gap-2 hidden lg:flex"
-                      >
-                        <BarChart3 className="w-4 h-4" />
-                        Analytics
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => navigate("/dashboard")}
-                        className="gap-2 hidden md:flex"
-                      >
-                        <BarChart3 className="w-4 h-4" />
-                        Dashboard
-                      </Button>
-                    </>
-                  )}
-                  {isAdmin && (
-                    <>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => navigate("/admin/dashboard")}
-                        className="gap-2 hidden lg:flex"
-                      >
-                        Dashboard
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => navigate("/admin")}
-                        className="gap-2 hidden lg:flex"
-                      >
-                        Admin
-                      </Button>
-                    </>
-                  )}
-                  <div className="hidden sm:flex items-center gap-2">
-                    <ThemeToggle />
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={async () => {
-                      // Force redirect even if signOut fails
-                      try {
-                        await supabase.auth.signOut();
-                      } catch (error) {
-                        console.error('SignOut error:', error);
-                      } finally {
-                        // Always clear state and redirect
-                        setIsAuthenticated(false);
-                        setUserProfile(null);
-                        setProcessedMeeting(null);
-                        setCurrentNoteId(null);
-                        window.location.href = '/auth';
-                      }
-                    }}
-                    className="gap-2 hidden sm:flex text-xs sm:text-sm"
-                  >
-                    <LogIn className="w-3 h-3 sm:w-4 sm:h-4" />
-                    Sair
-                  </Button>
-                </>
-              )}
-            </div>
-          </div>
+    <AdminLayout title="Gravar">
+      <div className="space-y-8">
+        {/* Two recorder cards side by side */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
+          <VoiceRecorder
+            onRecordingComplete={handleRecordingComplete}
+            isProcessing={!!processingStep}
+          />
+          <VoiceNoteRecorder
+            onRecordingComplete={handleRecordingComplete}
+            isProcessing={!!processingStep}
+          />
         </div>
-      </header>
 
-      {/* Main content */}
-      <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10 max-w-7xl">
-        <div className="space-y-8">
-          {/* Two recorder cards side by side */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
-            <VoiceRecorder
-              onRecordingComplete={handleRecordingComplete}
-              isProcessing={!!processingStep}
+        {processingStep && <ProcessingSteps currentStep={processingStep} />}
+
+        {processedMeeting && !processingStep && (
+          <>
+            <SummaryCard
+              summary={processedMeeting.summary}
+              sentiment={processedMeeting.sentiment}
+              language={processedMeeting.language}
+              confidence={processedMeeting.sentiment_confidence}
             />
-            <VoiceNoteRecorder
-              onRecordingComplete={handleRecordingComplete}
-              isProcessing={!!processingStep}
+
+            <EntitiesCard
+              customerName={processedMeeting.customer?.name}
+              customerCompany={processedMeeting.customer?.company}
+              participants={processedMeeting.participants}
+              meetingDatetime={processedMeeting.meeting?.datetime_iso}
+              meetingDuration={processedMeeting.meeting?.duration_min}
+              onUpdate={handleUpdateEntities}
             />
-          </div>
 
-          {processingStep && <ProcessingSteps currentStep={processingStep} />}
-
-          {processedMeeting && !processingStep && (
-            <>
-              <SummaryCard
-                summary={processedMeeting.summary}
-                sentiment={processedMeeting.sentiment}
-                language={processedMeeting.language}
-                confidence={processedMeeting.sentiment_confidence}
+            {processedMeeting.email_drafts && processedMeeting.email_drafts.map((draft, index) => (
+              <EmailActionCard
+                key={`email-${index}`}
+                draft={draft}
+                onCreateDraft={(recipients) => handleCreateEmailDraft(draft, recipients)}
+                onSend={(recipients) => handleSendEmail(draft, recipients)}
               />
+            ))}
 
-              <EntitiesCard
-                customerName={processedMeeting.customer?.name}
-                customerCompany={processedMeeting.customer?.company}
-                participants={processedMeeting.participants}
-                meetingDatetime={processedMeeting.meeting?.datetime_iso}
-                meetingDuration={processedMeeting.meeting?.duration_min}
-                onUpdate={handleUpdateEntities}
-              />
+            {processedMeeting.sales_opportunities && processedMeeting.sales_opportunities.length > 0 && (
+              <SalesOpportunitiesCard opportunities={processedMeeting.sales_opportunities} />
+            )}
 
-              {processedMeeting.email_drafts && processedMeeting.email_drafts.map((draft, index) => (
-                <EmailActionCard
-                  key={`email-${index}`}
-                  draft={draft}
-                  onCreateDraft={(recipients) => handleCreateEmailDraft(draft, recipients)}
-                  onSend={(recipients) => handleSendEmail(draft, recipients)}
-                />
-              ))}
-
-              {processedMeeting.sales_opportunities && processedMeeting.sales_opportunities.length > 0 && (
-                <SalesOpportunitiesCard opportunities={processedMeeting.sales_opportunities} />
-              )}
-
-              <BusinessInsightsCard
-                clientNeeds={processedMeeting.client_needs}
-                objections={processedMeeting.objections}
-                businessInsights={processedMeeting.business_insights}
-              />
-            </>
-          )}
-        </div>
-      </main>
-    </div>
+            <BusinessInsightsCard
+              clientNeeds={processedMeeting.client_needs}
+              objections={processedMeeting.objections}
+              businessInsights={processedMeeting.business_insights}
+            />
+          </>
+        )}
+      </div>
+    </AdminLayout>
   );
 };
 
