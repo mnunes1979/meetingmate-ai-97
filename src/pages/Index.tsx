@@ -13,7 +13,7 @@ import { EmailActionCard } from "@/components/actions/EmailActionCard";
 import { SalesOpportunitiesCard } from "@/components/meeting/SalesOpportunitiesCard";
 import { BusinessInsightsCard } from "@/components/meeting/BusinessInsightsCard";
 import { useToast } from "@/hooks/use-toast";
-import { Mic2, LogIn, Building2, FileText, BarChart3, Settings } from "lucide-react";
+import { Mic2, LogIn, Building2, FileText, BarChart3 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { MobileNav } from "@/components/MobileNav";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -795,11 +795,11 @@ const Index = () => {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => navigate("/settings")}
+                        onClick={() => navigate("/dashboard")}
                         className="gap-2 hidden md:flex"
                       >
-                        <Settings className="w-4 h-4" />
-                        {t('navigation.settings')}
+                        <BarChart3 className="w-4 h-4" />
+                        Dashboard
                       </Button>
                     </>
                   ) : (
@@ -826,11 +826,11 @@ const Index = () => {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => navigate("/settings")}
+                        onClick={() => navigate("/dashboard")}
                         className="gap-2 hidden md:flex"
                       >
-                        <Settings className="w-4 h-4" />
-                        {t('navigation.settings')}
+                        <BarChart3 className="w-4 h-4" />
+                        Dashboard
                       </Button>
                     </>
                   )}

@@ -5,9 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Plus, GripVertical, CheckCircle2, Clock, AlertCircle, Trash2, ExternalLink, LogOut, BarChart3, Settings as SettingsIcon, Mic2 } from "lucide-react";
+import { Loader2, Plus, GripVertical, CheckCircle2, Clock, AlertCircle, Trash2, ExternalLink, LogOut, BarChart3, Mic2 } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { LanguageSelector } from "@/components/LanguageSelector";
 import { MobileNav } from "@/components/MobileNav";
 import { useAuth } from "@/hooks/useAuth";
 import {
@@ -252,12 +251,7 @@ const Tasks = () => {
                 <BarChart3 className="w-4 h-4 mr-2" />
                 Dashboard
               </Button>
-              <Button variant="ghost" size="sm" onClick={() => navigate("/settings")}>
-                <SettingsIcon className="w-4 h-4 mr-2" />
-                Definições
-              </Button>
               <ThemeToggle />
-              <LanguageSelector />
               <Button variant="ghost" size="icon" onClick={handleSignOut} title="Terminar Sessão">
                 <LogOut className="w-5 h-5" />
               </Button>
