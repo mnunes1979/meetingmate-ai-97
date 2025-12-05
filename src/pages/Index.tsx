@@ -356,6 +356,7 @@ const Index = () => {
             sales_rep_name: salesRepName,
             language: transcriptData.language || 'pt',
             sentiment: processData.sentiment,
+            sentiment_score: processData.sentiment_score,
             sentiment_confidence: processData.sentiment_confidence,
             transcript_url: publicUrl,
             transcript_text: transcriptData.text,
@@ -369,6 +370,9 @@ const Index = () => {
             participants: processData.participants,
             intents: processData.intents,
             risks: processData.risks,
+            opportunities: processData.opportunities || [],
+            action_items: processData.action_items || [],
+            topics: processData.topics || [],
             raw_llm_output: processData,
           })
           .select()
