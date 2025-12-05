@@ -5,7 +5,8 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Loader2, Calendar, Clock, User, Building2, TrendingUp, TrendingDown, AlertTriangle, Lightbulb, Mail, CheckCircle2, XCircle } from "lucide-react";
+import { ArrowLeft, Loader2, Calendar, Clock, User, Building2, TrendingUp, TrendingDown, AlertTriangle, Lightbulb, Mail, CheckCircle2, XCircle, Sparkles, ListTodo } from "lucide-react";
+import { FollowUpEmailDialog } from "@/components/meeting/FollowUpEmailDialog";
 import { Separator } from "@/components/ui/separator";
 import { NavLink } from "@/components/NavLink";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -27,6 +28,7 @@ interface MeetingData {
   participants: any;
   raw_llm_output: any;
   transcript_text: string;
+  action_items: any[] | null;
 }
 
 const MeetingDetail = () => {
@@ -36,9 +38,56 @@ const MeetingDetail = () => {
   const [loading, setLoading] = useState(true);
   const [meeting, setMeeting] = useState<MeetingData | null>(null);
   const [emailActions, setEmailActions] = useState<any[]>([]);
+  const [emailDialogOpen, setEmailDialogOpen] = useState(false);
+  const [importingTasks, setImportingTasks] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
   const { t, i18n } = useTranslation();
+
+  const importActionItemsAsTasks = async () => {
+    if (!meeting || !user) return;
+    
+    const actionItems = meeting.action_items || meeting.raw_llm_output?.action_items || [];
+    if (actionItems.length === 0) {
+      toast({
+        title: "Sem ações",
+        description: "Esta reunião não tem ações para importar",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setImportingTasks(true);
+    try {
+      const tasks = actionItems.map((item: any) => ({
+        user_id: user.id,
+        meeting_id: meeting.id,
+        title: typeof item === 'string' ? item : item.task || item.title || 'Tarefa',
+        description: meeting.customer_name ? `Cliente: ${meeting.customer_name}` : null,
+        assignee: typeof item === 'string' ? null : item.assignee || null,
+        priority: typeof item === 'string' ? 'Medium' : (item.priority || 'Medium'),
+        status: 'todo',
+      }));
+
+      const { error } = await supabase.from('tasks').insert(tasks);
+      if (error) throw error;
+
+      toast({
+        title: "Tarefas importadas",
+        description: `${tasks.length} tarefa(s) adicionada(s) ao Plano de Ação`,
+      });
+
+      navigate('/tasks');
+    } catch (error: any) {
+      toast({
+        title: "Erro",
+        description: "Erro ao importar tarefas",
+        variant: "destructive",
+      });
+    } finally {
+      setImportingTasks(false);
+    }
+  };
 
   useEffect(() => {
     checkAuthAndLoad();
@@ -145,6 +194,7 @@ const MeetingDetail = () => {
   const objections = analysis.objections || [];
   const businessInsights = analysis.business_insights || {};
   const risks = analysis.risks || [];
+  const actionItems = meeting.action_items || analysis.action_items || [];
 
   return (
     <div className="min-h-screen bg-background">
@@ -596,20 +646,59 @@ const MeetingDetail = () => {
           </Card>
         )}
 
-        {/* Ações Recomendadas */}
-        {summary.action_items && summary.action_items.length > 0 && (
+        {/* Ações Extraídas pela IA */}
+        {actionItems.length > 0 && (
           <Card className="p-6 space-y-4">
-            <h2 className="text-xl font-bold">{t('meetingDetail.recommendedActions')}</h2>
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-bold flex items-center gap-2">
+                <ListTodo className="w-5 h-5 text-primary" />
+                Ações Identificadas ({actionItems.length})
+              </h2>
+              <Button onClick={importActionItemsAsTasks} disabled={importingTasks} size="sm">
+                {importingTasks ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <ListTodo className="w-4 h-4 mr-2" />
+                )}
+                Importar para Tarefas
+              </Button>
+            </div>
             <ul className="space-y-2">
-              {summary.action_items.map((action: string, i: number) => (
-                <li key={i} className="flex gap-3 items-start">
+              {actionItems.map((item: any, i: number) => (
+                <li key={i} className="flex gap-3 items-start p-2 rounded bg-muted/30">
                   <span className="text-primary mt-1">→</span>
-                  <span className="text-sm">{action}</span>
+                  <div className="flex-1">
+                    <span className="text-sm font-medium">{typeof item === 'string' ? item : item.task || item.title}</span>
+                    {item.assignee && <span className="text-xs text-muted-foreground ml-2">({item.assignee})</span>}
+                    {item.priority && <Badge variant="outline" className="ml-2 text-xs">{item.priority}</Badge>}
+                  </div>
                 </li>
               ))}
             </ul>
           </Card>
         )}
+
+        {/* Botão de Gerar Email de Follow-up */}
+        <Card className="p-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div>
+              <h2 className="text-xl font-bold">Gerar Email de Follow-up</h2>
+              <p className="text-sm text-muted-foreground mt-1">
+                Use IA para criar um email profissional baseado nesta reunião
+              </p>
+            </div>
+            <Button onClick={() => setEmailDialogOpen(true)} className="w-full sm:w-auto">
+              <Sparkles className="w-4 h-4 mr-2" />
+              Gerar Email de Follow-up
+            </Button>
+          </div>
+        </Card>
+
+        <FollowUpEmailDialog
+          meetingId={meeting.id}
+          open={emailDialogOpen}
+          onOpenChange={setEmailDialogOpen}
+        />
       </main>
     </div>
   );

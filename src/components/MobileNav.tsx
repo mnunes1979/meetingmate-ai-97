@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Menu, X, Mic2, FileText, BarChart3, Building2, Settings as SettingsIcon, LogOut, Users, Home } from "lucide-react";
+import { Menu, X, Mic2, FileText, BarChart3, Building2, Settings as SettingsIcon, LogOut, Users, Home, ListTodo } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -98,6 +98,15 @@ export const MobileNav = ({ isAdmin = false, userEmail, accessType = 'full' }: M
                 >
                   <FileText className="h-4 w-4" />
                   {t('navigation.myMeetings')}
+                </Button>
+
+                <Button
+                  variant="ghost"
+                  className="justify-start gap-3"
+                  onClick={() => navigateTo("/tasks")}
+                >
+                  <ListTodo className="h-4 w-4" />
+                  Tarefas
                 </Button>
 
                 <Button

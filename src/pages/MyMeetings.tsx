@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, FileText, Calendar, User, LogOut, Mic2, BarChart3, Settings as SettingsIcon, Target, AlertTriangle, CheckSquare } from "lucide-react";
+import { Loader2, FileText, Calendar, User, LogOut, Mic2, BarChart3, Settings as SettingsIcon, Target, AlertTriangle, CheckSquare, ListTodo, AlertCircle } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { LanguageSelector } from "@/components/LanguageSelector";
 import { MobileNav } from "@/components/MobileNav";
@@ -183,6 +183,10 @@ const MyMeetings = () => {
                 <Mic2 className="w-4 h-4 mr-2" />
                 Gravar
               </Button>
+              <Button variant="ghost" size="sm" onClick={() => navigate("/tasks")}>
+                <ListTodo className="w-4 h-4 mr-2" />
+                Tarefas
+              </Button>
               <Button variant="ghost" size="sm" onClick={() => navigate("/email-analytics")}>
                 <BarChart3 className="w-4 h-4 mr-2" />
                 Análises
@@ -266,6 +270,13 @@ const MyMeetings = () => {
                             <Badge variant="outline" className={`${getSentimentColor(note.sentiment, note.sentiment_score)} text-xs`}>
                               {getSentimentLabel(note.sentiment, note.sentiment_score)}
                             </Badge>
+                            {/* High Priority Badge for sentiment_score < 40 */}
+                            {note.sentiment_score !== null && note.sentiment_score < 40 && (
+                              <Badge variant="destructive" className="text-xs gap-1">
+                                <AlertCircle className="w-3 h-3" />
+                                Alta Prioridade
+                              </Badge>
+                            )}
                           </div>
                           
                           {note.customer_name && (
