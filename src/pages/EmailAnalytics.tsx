@@ -190,7 +190,7 @@ export default function EmailAnalytics() {
       case 'opened':
         return <TrendingUp className="w-4 h-4 text-action-email" />;
       case 'clicked':
-        return <MousePointer className="w-4 h-4 text-action-calendar" />;
+        return <MousePointer className="w-4 h-4 text-accent" />;
       case 'bounced':
         return <XCircle className="w-4 h-4 text-sentiment-negative" />;
       case 'complained':
@@ -207,7 +207,7 @@ export default function EmailAnalytics() {
       case 'opened':
         return 'text-action-email';
       case 'clicked':
-        return 'text-action-calendar';
+        return 'text-accent';
       case 'bounced':
       case 'complained':
         return 'text-sentiment-negative';
@@ -326,7 +326,7 @@ export default function EmailAnalytics() {
                     {t('analytics.clickRate')}
                   </CardTitle>
                   <div className="flex items-center gap-2">
-                    <MousePointer className="w-5 h-5 text-action-calendar" />
+                    <MousePointer className="w-5 h-5 text-accent" />
                     <p className="text-2xl font-bold">{stats.click_rate.toFixed(1)}%</p>
                   </div>
                   <p className="text-xs text-muted-foreground">

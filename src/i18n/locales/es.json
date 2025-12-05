@@ -75,27 +75,10 @@
     "sentSuccess": "Correo enviado con éxito",
     "error": "No se pudo enviar el correo"
   },
-  "calendar": {
-    "addToCalendar": "Añadir al Calendario",
-    "checkingAvailability": "Verificando disponibilidad...",
-    "available": "Disponible",
-    "conflict": "Conflicto",
-    "description": "Descripción",
-    "attendees": "Asistentes",
-    "verifyAvailability": "Verificar Disponibilidad",
-    "addEvent": "Añadir al Calendario",
-    "eventAdded": "¡Evento Añadido!",
-    "eventAddedDesc": "El evento se ha añadido a su Google Calendar"
-  },
   "settings": {
     "title": "Configuración",
     "integrations": "Integraciones",
     "connectServices": "Conecte sus servicios para automatizar acciones",
-    "googleCalendar": "Google Calendar",
-    "googleCalendarDesc": "Añadir reuniones automáticamente a su calendario de Google",
-    "connected": "Conectado",
-    "disconnect": "Desconectar",
-    "connect": "Conectar",
     "email": "Correo Electrónico",
     "emailConfigured": "Sistema de envío de correos configurado",
     "active": "Activo"

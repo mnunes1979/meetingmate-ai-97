@@ -75,27 +75,10 @@
     "sentSuccess": "Correu enviat amb èxit",
     "error": "No s'ha pogut enviar el correu"
   },
-  "calendar": {
-    "addToCalendar": "Afegir al Calendari",
-    "checkingAvailability": "Verificant disponibilitat...",
-    "available": "Disponible",
-    "conflict": "Conflicte",
-    "description": "Descripció",
-    "attendees": "Assistents",
-    "verifyAvailability": "Verificar Disponibilitat",
-    "addEvent": "Afegir al Calendari",
-    "eventAdded": "Esdeveniment Afegit!",
-    "eventAddedDesc": "L'esdeveniment s'ha afegit al vostre Google Calendar"
-  },
   "settings": {
     "title": "Configuració",
     "integrations": "Integracions",
     "connectServices": "Connecteu els vostres serveis per automatitzar les accions",
-    "googleCalendar": "Google Calendar",
-    "googleCalendarDesc": "Afegiu reunions automàticament al vostre calendari de Google",
-    "connected": "Connectat",
-    "disconnect": "Desconnectar",
-    "connect": "Connectar",
     "email": "Correu Electrònic",
     "emailConfigured": "Sistema d'enviament de correus electrònics configurat",
     "active": "Actiu"

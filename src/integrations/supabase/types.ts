@@ -198,69 +198,6 @@ export type Database = {
         }
         Relationships: []
       }
-      calendar_events: {
-        Row: {
-          attendees: Json | null
-          created_at: string
-          description: string | null
-          end_time: string
-          error_message: string | null
-          external_id: string | null
-          id: string
-          note_id: string
-          start_time: string
-          status: string | null
-          title: string
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          attendees?: Json | null
-          created_at?: string
-          description?: string | null
-          end_time: string
-          error_message?: string | null
-          external_id?: string | null
-          id?: string
-          note_id: string
-          start_time: string
-          status?: string | null
-          title: string
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          attendees?: Json | null
-          created_at?: string
-          description?: string | null
-          end_time?: string
-          error_message?: string | null
-          external_id?: string | null
-          id?: string
-          note_id?: string
-          start_time?: string
-          status?: string | null
-          title?: string
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "calendar_events_note_id_fkey"
-            columns: ["note_id"]
-            isOneToOne: false
-            referencedRelation: "meeting_notes"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "calendar_events_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       clients: {
         Row: {
           active: boolean
@@ -733,26 +670,12 @@ export type Database = {
           digest_email: string | null
           digest_hour: number | null
           email: string
-          google_access_token: string | null
-          google_calendar_id: string | null
-          google_calendar_summary: string | null
-          google_calendar_timezone: string | null
-          google_linked: boolean | null
-          google_refresh_token: string | null
-          google_token_expires_at: string | null
           id: string
           job_title: string | null
           name: string | null
           resend_webhook_secret: string | null
           retention_days: number | null
           timezone: string | null
-          trello_api_key: string | null
-          trello_api_token: string | null
-          trello_board_id: string | null
-          trello_board_name: string | null
-          trello_linked: boolean | null
-          trello_list_id: string | null
-          trello_list_name: string | null
           updated_at: string
         }
         Insert: {
@@ -765,26 +688,12 @@ export type Database = {
           digest_email?: string | null
           digest_hour?: number | null
           email: string
-          google_access_token?: string | null
-          google_calendar_id?: string | null
-          google_calendar_summary?: string | null
-          google_calendar_timezone?: string | null
-          google_linked?: boolean | null
-          google_refresh_token?: string | null
-          google_token_expires_at?: string | null
           id: string
           job_title?: string | null
           name?: string | null
           resend_webhook_secret?: string | null
           retention_days?: number | null
           timezone?: string | null
-          trello_api_key?: string | null
-          trello_api_token?: string | null
-          trello_board_id?: string | null
-          trello_board_name?: string | null
-          trello_linked?: boolean | null
-          trello_list_id?: string | null
-          trello_list_name?: string | null
           updated_at?: string
         }
         Update: {
@@ -797,26 +706,12 @@ export type Database = {
           digest_email?: string | null
           digest_hour?: number | null
           email?: string
-          google_access_token?: string | null
-          google_calendar_id?: string | null
-          google_calendar_summary?: string | null
-          google_calendar_timezone?: string | null
-          google_linked?: boolean | null
-          google_refresh_token?: string | null
-          google_token_expires_at?: string | null
           id?: string
           job_title?: string | null
           name?: string | null
           resend_webhook_secret?: string | null
           retention_days?: number | null
           timezone?: string | null
-          trello_api_key?: string | null
-          trello_api_token?: string | null
-          trello_board_id?: string | null
-          trello_board_name?: string | null
-          trello_linked?: boolean | null
-          trello_list_id?: string | null
-          trello_list_name?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -1082,66 +977,6 @@ export type Database = {
           },
         ]
       }
-      trello_cards: {
-        Row: {
-          created_at: string
-          description: string | null
-          due_date: string | null
-          error_message: string | null
-          external_id: string | null
-          id: string
-          labels: Json | null
-          note_id: string
-          status: string | null
-          title: string
-          updated_at: string
-          user_id: string | null
-        }
-        Insert: {
-          created_at?: string
-          description?: string | null
-          due_date?: string | null
-          error_message?: string | null
-          external_id?: string | null
-          id?: string
-          labels?: Json | null
-          note_id: string
-          status?: string | null
-          title: string
-          updated_at?: string
-          user_id?: string | null
-        }
-        Update: {
-          created_at?: string
-          description?: string | null
-          due_date?: string | null
-          error_message?: string | null
-          external_id?: string | null
-          id?: string
-          labels?: Json | null
-          note_id?: string
-          status?: string | null
-          title?: string
-          updated_at?: string
-          user_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "trello_cards_note_id_fkey"
-            columns: ["note_id"]
-            isOneToOne: false
-            referencedRelation: "meeting_notes"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "trello_cards_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       user_roles: {
         Row: {
           id: string
@@ -1172,21 +1007,6 @@ export type Database = {
         Returns: Json
       }
       get_api_key_value: { Args: { p_key_name: string }; Returns: string }
-      get_google_access_token: {
-        Args: { _user_id: string }
-        Returns: {
-          access_token: string
-          expires_at: string
-        }[]
-      }
-      get_google_token_status: {
-        Args: { _user_id: string }
-        Returns: {
-          expires_at: string
-          is_connected: boolean
-          is_expired: boolean
-        }[]
-      }
       get_safe_profile: {
         Args: { profile_id: string }
         Returns: {
@@ -1208,24 +1028,11 @@ export type Database = {
           updated_at: string
         }[]
       }
-      get_trello_credentials: {
-        Args: { _user_id: string }
-        Returns: {
-          api_key: string
-          api_token: string
-          board_id: string
-          list_id: string
-        }[]
-      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
         }
-        Returns: boolean
-      }
-      is_google_calendar_connected: {
-        Args: { _user_id: string }
         Returns: boolean
       }
       log_audit_event: {
@@ -1238,27 +1045,6 @@ export type Database = {
         Returns: undefined
       }
       soft_delete_my_meeting_notes: { Args: never; Returns: number }
-      update_oauth_tokens: {
-        Args: {
-          _google_access_token: string
-          _google_refresh_token: string
-          _google_token_expires_at: string
-          _user_id: string
-        }
-        Returns: undefined
-      }
-      update_trello_config: {
-        Args: {
-          _api_key: string
-          _api_token: string
-          _board_id: string
-          _board_name: string
-          _list_id: string
-          _list_name: string
-          _user_id: string
-        }
-        Returns: undefined
-      }
     }
     Enums: {
       access_type: "full" | "renewals_only"
