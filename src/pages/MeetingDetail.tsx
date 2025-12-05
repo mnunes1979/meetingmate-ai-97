@@ -5,18 +5,13 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Loader2, Calendar, Clock, User, Building2, TrendingUp, TrendingDown, AlertTriangle, Lightbulb, Mail, CheckCircle2, XCircle, Sparkles, ListTodo, Edit2 } from "lucide-react";
+import { Loader2, User, TrendingUp, TrendingDown, AlertTriangle, Lightbulb, Mail, CheckCircle2, XCircle, Sparkles, ListTodo } from "lucide-react";
 import { EntitiesCard } from "@/components/meeting/EntitiesCard";
 import { FollowUpEmailDialog } from "@/components/meeting/FollowUpEmailDialog";
 import { MeetingKanban } from "@/components/meeting/MeetingKanban";
 import { MeetingComments } from "@/components/meeting/MeetingComments";
-import { NotificationBadge } from "@/components/NotificationBadge";
-import { Separator } from "@/components/ui/separator";
-import { NavLink } from "@/components/NavLink";
-import { ThemeToggle } from "@/components/ThemeToggle";
-import { MobileNav } from "@/components/MobileNav";
-import { LanguageSelector } from "@/components/LanguageSelector";
 import { useTranslation } from "react-i18next";
+import AdminLayout from "@/components/admin/AdminLayout";
 
 interface MeetingData {
   id: string;
@@ -224,9 +219,11 @@ const MeetingDetail = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-      </div>
+      <AdminLayout title={t('meetingDetail.title')}>
+        <div className="flex items-center justify-center py-20">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </div>
+      </AdminLayout>
     );
   }
 
@@ -243,49 +240,8 @@ const MeetingDetail = () => {
   const actionItems = meeting.action_items || analysis.action_items || [];
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b border-border/50 backdrop-blur-sm sticky top-0 z-10 bg-background/80">
-        <div className="container mx-auto px-4 py-3 md:py-4">
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <MobileNav isAdmin={isAdmin} userEmail={user?.email} />
-              <Button variant="ghost" size="icon" asChild className="hidden md:flex">
-                <NavLink to={meeting.raw_llm_output ? "/my-meetings" : "/admin"}>
-                  <ArrowLeft className="w-5 h-5" />
-                </NavLink>
-              </Button>
-              <div>
-                <h1 className="text-lg md:text-2xl font-bold">{t('meetingDetail.title')}</h1>
-                <p className="text-xs md:text-sm text-muted-foreground hidden sm:block">
-                  {new Date(meeting.created_at).toLocaleString(({
-                    pt: 'pt-PT',
-                    es: 'es-ES',
-                    ca: 'ca-ES',
-                    fr: 'fr-FR',
-                    en: 'en-US',
-                  } as Record<string, string>)[i18n.language] || 'ca-ES', {
-                    dateStyle: 'long',
-                    timeStyle: 'short',
-                  })}
-                </p>
-              </div>
-            </div>
-            <div className="hidden md:flex items-center gap-2">
-              <NotificationBadge />
-              <ThemeToggle />
-              <LanguageSelector />
-            </div>
-            <div className="md:hidden flex items-center gap-1">
-              <NotificationBadge />
-              <ThemeToggle />
-            </div>
-          </div>
-        </div>
-      </header>
-
-      {/* Main content */}
-      <main className="container mx-auto px-3 sm:px-4 py-4 sm:py-8 max-w-5xl space-y-4 sm:space-y-6">
+    <AdminLayout title={t('meetingDetail.title')}>
+      <div className="max-w-5xl mx-auto space-y-4 sm:space-y-6">
         {/* Info Básica - Editável para admins */}
         <EntitiesCard
           customerName={meeting.customer_name || undefined}
@@ -707,8 +663,8 @@ const MeetingDetail = () => {
           open={emailDialogOpen}
           onOpenChange={setEmailDialogOpen}
         />
-      </main>
-    </div>
+      </div>
+    </AdminLayout>
   );
 };
 
