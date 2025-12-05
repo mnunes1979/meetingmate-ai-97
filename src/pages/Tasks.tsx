@@ -5,10 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Plus, GripVertical, CheckCircle2, Clock, AlertCircle, Trash2, ExternalLink, LogOut, BarChart3, Mic2 } from "lucide-react";
-import { ThemeToggle } from "@/components/ThemeToggle";
-import { MobileNav } from "@/components/MobileNav";
-import { useAuth } from "@/hooks/useAuth";
+import { Loader2, Plus, GripVertical, CheckCircle2, Clock, AlertCircle, Trash2, ExternalLink } from "lucide-react";
+import AdminLayout from "@/components/admin/AdminLayout";
 import {
   Dialog,
   DialogContent,
@@ -55,7 +53,6 @@ const Tasks = () => {
   const [newTask, setNewTask] = useState<{ title: string; description: string; assignee: string; priority: 'High' | 'Medium' | 'Low' }>({ title: '', description: '', assignee: '', priority: 'Medium' });
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { handleSignOut } = useAuth();
 
   useEffect(() => {
     checkAuth();
@@ -229,41 +226,8 @@ const Tasks = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b border-border/50 backdrop-blur-sm sticky top-0 z-10 bg-background/80">
-        <div className="container mx-auto px-4 py-3 md:py-4">
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <MobileNav userEmail={user?.email} />
-              <div>
-                <h1 className="text-lg md:text-2xl font-bold">Plano de Ação</h1>
-                <p className="text-xs md:text-sm text-muted-foreground hidden sm:block">
-                  Gerencie as suas tarefas
-                </p>
-              </div>
-            </div>
-            <div className="hidden md:flex items-center gap-2">
-              <Button variant="ghost" size="sm" onClick={() => navigate("/")}>
-                <Mic2 className="w-4 h-4 mr-2" />
-                Gravar
-              </Button>
-              <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard")}>
-                <BarChart3 className="w-4 h-4 mr-2" />
-                Dashboard
-              </Button>
-              <ThemeToggle />
-              <Button variant="ghost" size="icon" onClick={handleSignOut} title="Terminar Sessão">
-                <LogOut className="w-5 h-5" />
-              </Button>
-            </div>
-            <div className="md:hidden">
-              <ThemeToggle />
-            </div>
-          </div>
-        </div>
-      </header>
-
-      <main className="container mx-auto px-3 sm:px-4 py-4 sm:py-8">
+    <AdminLayout title="Tarefas">
+      <div className="space-y-6">
         <div className="mb-4 sm:mb-6 flex items-center justify-between">
           <h2 className="text-lg sm:text-xl font-semibold">
             Tarefas ({tasks.length})
@@ -423,8 +387,8 @@ const Tasks = () => {
             );
           })}
         </div>
-      </main>
-    </div>
+      </div>
+    </AdminLayout>
   );
 };
 
