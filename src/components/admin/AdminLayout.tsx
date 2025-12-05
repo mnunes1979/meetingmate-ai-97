@@ -2,6 +2,7 @@ import { ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { NotificationBadge } from "@/components/NotificationBadge";
 import { Button } from "@/components/ui/button";
 import { Mic2, LogOut } from "lucide-react";
 import { AppSidebar } from "./AppSidebar";
@@ -29,6 +30,7 @@ export default function AdminLayout({ title, children }: AdminLayoutProps) {
                 <h1 className="text-lg md:text-xl font-semibold">{title}</h1>
               </div>
               <div className="flex items-center gap-2">
+                <NotificationBadge />
                 <ThemeToggle />
                 <Button variant="ghost" size="sm" onClick={() => navigate("/")}>
                   <Mic2 className="w-4 h-4 mr-2" />
