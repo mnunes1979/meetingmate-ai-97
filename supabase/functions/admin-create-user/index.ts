@@ -7,10 +7,14 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+const SUPER_ADMIN_EMAIL = "mnunes.maciel@gmail.com";
+
 const createUserSchema = z.object({
   email: z.string().email().max(255),
   password: z.string().min(8).max(128),
   name: z.string().min(1).max(255).trim(),
+  department_id: z.string().uuid().nullable().optional(),
+  role: z.enum(['admin', 'sales_rep']).default('sales_rep'),
 });
 
 serve(async (req) => {
@@ -50,6 +54,9 @@ serve(async (req) => {
       throw new Error('Only admins can create users');
     }
 
+    // Check if user is super admin (for creating admin users)
+    const isSuperAdmin = user.email === SUPER_ADMIN_EMAIL;
+
     // Rate limiting check
     const { data: recentActions } = await supabaseAdmin
       .from('rate_limits')
@@ -63,7 +70,12 @@ serve(async (req) => {
     }
 
     const requestData = await req.json();
-    const { email, password, name } = createUserSchema.parse(requestData);
+    const { email, password, name, department_id, role } = createUserSchema.parse(requestData);
+
+    // Only super admin can create admin users
+    if (role === 'admin' && !isSuperAdmin) {
+      throw new Error('Only super admin can create admin users');
+    }
 
     // Log rate limit
     await supabaseAdmin.from('rate_limits').insert({
@@ -84,6 +96,40 @@ serve(async (req) => {
       throw createError;
     }
 
+    if (!newUser.user) {
+      throw new Error('Failed to create user');
+    }
+
+    // Update profile with department_id if provided
+    if (department_id) {
+      await supabaseAdmin
+        .from('profiles')
+        .update({ department_id })
+        .eq('id', newUser.user.id);
+    }
+
+    // Create role entry
+    await supabaseAdmin.from('user_roles').insert({
+      user_id: newUser.user.id,
+      role: role,
+    });
+
+    // Log audit event
+    await supabaseAdmin.from('audit_logs').insert({
+      user_id: user.id,
+      action: 'create_user',
+      resource_type: 'user',
+      resource_id: newUser.user.id,
+      metadata: {
+        created_email: email,
+        created_name: name,
+        assigned_role: role,
+        department_id: department_id || null,
+      },
+    });
+
+    console.log(`User created: ${email} with role ${role} by ${user.email}`);
+
     return new Response(
       JSON.stringify({ user: newUser }),
       { 
@@ -94,6 +140,7 @@ serve(async (req) => {
 
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
+    console.error('Error creating user:', message);
     return new Response(
       JSON.stringify({ error: message }),
       { 

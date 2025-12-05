@@ -1,13 +1,12 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { useTranslation } from "react-i18next";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Plus, Trash2, Mail, Building2 } from "lucide-react";
+import { Loader2, Plus, Trash2, Mail, Building2, User } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import AdminLayout from "@/components/admin/AdminLayout";
 import {
@@ -24,10 +23,10 @@ interface Department {
   name: string;
   created_at: string;
   emails: string[];
+  members: { id: string; name: string; email: string }[];
 }
 
 const Departments = () => {
-  const { t } = useTranslation();
   const [user, setUser] = useState<any>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -56,23 +55,6 @@ const Departments = () => {
       }
 
       setUser(session.user);
-      
-      // Check access_type
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('access_type')
-        .eq('id', session.user.id)
-        .single();
-      
-      if (profile?.access_type === 'renewals_only') {
-        toast({
-          title: "Acesso Restrito",
-          description: "Você só tem permissão para acessar a área de Renovações",
-          variant: "destructive",
-        });
-        navigate("/renewals");
-        return;
-      }
 
       // Check if user is admin
       const { data: roleData } = await supabase
@@ -100,26 +82,34 @@ const Departments = () => {
 
       if (deptsError) throw deptsError;
 
-      const deptsWithEmails = await Promise.all(
+      const deptsWithDetails = await Promise.all(
         (depts || []).map(async (dept) => {
+          // Get emails
           const { data: emails } = await supabase
             .from("department_emails")
             .select("email")
             .eq("department_id", dept.id);
 
+          // Get members (users in this department)
+          const { data: members } = await supabase
+            .from("profiles")
+            .select("id, name, email")
+            .eq("department_id", dept.id);
+
           return {
             ...dept,
             emails: emails?.map((e) => e.email) || [],
+            members: members || [],
           };
         })
       );
 
-      setDepartments(deptsWithEmails);
+      setDepartments(deptsWithDetails);
     } catch (error: any) {
       console.error("Error loading departments:", error);
       toast({
-        title: "Error",
-        description: error.message || "Error en carregar departaments",
+        title: "Erro",
+        description: error.message || "Erro ao carregar departamentos",
         variant: "destructive",
       });
     }
@@ -128,8 +118,8 @@ const Departments = () => {
   const handleCreateDepartment = async () => {
     if (!newDeptName.trim()) {
       toast({
-        title: "Error",
-        description: "El nom del departament és obligatori",
+        title: "Erro",
+        description: "O nome do departamento é obrigatório",
         variant: "destructive",
       });
       return;
@@ -137,7 +127,7 @@ const Departments = () => {
 
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("No authenticated user");
+      if (!user) throw new Error("Utilizador não autenticado");
 
       const { error } = await supabase.from("departments").insert({
         user_id: user.id,
@@ -147,8 +137,8 @@ const Departments = () => {
       if (error) throw error;
 
       toast({
-        title: "Departament creat",
-        description: `El departament "${newDeptName}" s'ha creat correctament.`,
+        title: "Departamento criado",
+        description: `O departamento "${newDeptName}" foi criado com sucesso.`,
       });
 
       setNewDeptName("");
@@ -157,8 +147,8 @@ const Departments = () => {
     } catch (error: any) {
       console.error("Error creating department:", error);
       toast({
-        title: "Error",
-        description: error.message || "Error en crear departament",
+        title: "Erro",
+        description: error.message || "Erro ao criar departamento",
         variant: "destructive",
       });
     }
@@ -174,16 +164,16 @@ const Departments = () => {
       if (error) throw error;
 
       toast({
-        title: "Departament eliminat",
-        description: "El departament s'ha eliminat correctament.",
+        title: "Departamento eliminado",
+        description: "O departamento foi eliminado com sucesso.",
       });
 
       await loadDepartments();
     } catch (error: any) {
       console.error("Error deleting department:", error);
       toast({
-        title: "Error",
-        description: error.message || "Error en eliminar departament",
+        title: "Erro",
+        description: error.message || "Erro ao eliminar departamento",
         variant: "destructive",
       });
     }
@@ -192,8 +182,8 @@ const Departments = () => {
   const handleAddEmail = async () => {
     if (!newEmail.trim() || !selectedDeptId) {
       toast({
-        title: "Error",
-        description: "Correu electrònic no vàlid",
+        title: "Erro",
+        description: "Email inválido",
         variant: "destructive",
       });
       return;
@@ -208,8 +198,8 @@ const Departments = () => {
       if (error) throw error;
 
       toast({
-        title: "Email afegit",
-        description: `L'email ${newEmail} s'ha afegit correctament.`,
+        title: "Email adicionado",
+        description: `O email ${newEmail} foi adicionado com sucesso.`,
       });
 
       setNewEmail("");
@@ -218,8 +208,8 @@ const Departments = () => {
     } catch (error: any) {
       console.error("Error adding email:", error);
       toast({
-        title: "Error",
-        description: error.message || "Error en afegir correu electrònic",
+        title: "Erro",
+        description: error.message || "Erro ao adicionar email",
         variant: "destructive",
       });
     }
@@ -236,16 +226,16 @@ const Departments = () => {
       if (error) throw error;
 
       toast({
-        title: "Email eliminat",
-        description: "L'email s'ha eliminat correctament.",
+        title: "Email removido",
+        description: "O email foi removido com sucesso.",
       });
 
       await loadDepartments();
     } catch (error: any) {
       console.error("Error removing email:", error);
       toast({
-        title: "Error",
-        description: error.message || "Error en eliminar correu electrònic",
+        title: "Erro",
+        description: error.message || "Erro ao remover email",
         variant: "destructive",
       });
     }
@@ -259,8 +249,8 @@ const Departments = () => {
   const handleUpdateDepartment = async () => {
     if (!editDept || !editDept.name.trim()) {
       toast({
-        title: "Error",
-        description: "El nom del departament és obligatori",
+        title: "Erro",
+        description: "O nome do departamento é obrigatório",
         variant: "destructive",
       });
       return;
@@ -275,8 +265,8 @@ const Departments = () => {
       if (error) throw error;
 
       toast({
-        title: "Departament actualitzat",
-        description: "El departament s'ha actualitzat correctament.",
+        title: "Departamento atualizado",
+        description: "O departamento foi atualizado com sucesso.",
       });
 
       setIsEditDialogOpen(false);
@@ -284,20 +274,10 @@ const Departments = () => {
       await loadDepartments();
     } catch (error: any) {
       toast({
-        title: "Error",
-        description: error.message || "Error en actualitzar departament",
+        title: "Erro",
+        description: error.message || "Erro ao atualizar departamento",
         variant: "destructive",
       });
-    }
-  };
-
-  const handleSignOut = async () => {
-    try {
-      await supabase.auth.signOut();
-    } catch (error) {
-      console.error('SignOut error:', error);
-    } finally {
-      window.location.href = '/auth';
     }
   };
 
@@ -310,37 +290,37 @@ const Departments = () => {
   }
 
   return (
-    <AdminLayout title="Departaments">
+    <AdminLayout title="Departamentos">
       <div className="max-w-4xl mx-auto">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 sm:mb-6 gap-3">
           <div>
-            <h2 className="text-2xl font-bold">Departaments</h2>
-            <p className="text-muted-foreground">Gestiona els departaments i els seus emails</p>
+            <h2 className="text-2xl font-bold">Departamentos</h2>
+            <p className="text-muted-foreground">Gerencie os departamentos e os seus membros</p>
           </div>
           <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
             <DialogTrigger asChild>
               <Button>
                 <Plus className="w-4 h-4 mr-2" />
-                Nou Departament
+                Novo Departamento
               </Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Crear Nou Departament</DialogTitle>
-                <DialogDescription>Introdueix el nom del nou departament</DialogDescription>
+                <DialogTitle>Criar Novo Departamento</DialogTitle>
+                <DialogDescription>Introduza o nome do novo departamento</DialogDescription>
               </DialogHeader>
               <div className="space-y-4">
                 <div>
-                  <Label htmlFor="dept-name">Nom del Departament</Label>
+                  <Label htmlFor="dept-name">Nome do Departamento</Label>
                   <Input
                     id="dept-name"
                     value={newDeptName}
                     onChange={(e) => setNewDeptName(e.target.value)}
-                    placeholder="Ex: Vendes, Finançes, Suport..."
+                    placeholder="Ex: Comerciais, Técnicos, Mecânicos..."
                   />
                 </div>
                 <Button onClick={handleCreateDepartment} className="w-full">
-                  Crear Departament
+                  Criar Departamento
                 </Button>
               </div>
             </DialogContent>
@@ -351,12 +331,12 @@ const Departments = () => {
         <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Editar Departament</DialogTitle>
-              <DialogDescription>Modifica el nom del departament</DialogDescription>
+              <DialogTitle>Editar Departamento</DialogTitle>
+              <DialogDescription>Modifique o nome do departamento</DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
               <div>
-                <Label htmlFor="edit-dept-name">Nom del Departament</Label>
+                <Label htmlFor="edit-dept-name">Nome do Departamento</Label>
                 <Input
                   id="edit-dept-name"
                   value={editDept?.name || ""}
@@ -364,7 +344,7 @@ const Departments = () => {
                 />
               </div>
               <Button onClick={handleUpdateDepartment} className="w-full">
-                Guardar Canvis
+                Guardar Alterações
               </Button>
             </div>
           </DialogContent>
@@ -374,7 +354,7 @@ const Departments = () => {
           {departments.length === 0 ? (
             <Card className="p-8 text-center">
               <Building2 className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-              <p className="text-muted-foreground">Encara no tens cap departament creat</p>
+              <p className="text-muted-foreground">Ainda não tem departamentos criados</p>
             </Card>
           ) : (
             departments.map((dept) => (
@@ -383,7 +363,7 @@ const Departments = () => {
                   <div>
                     <h3 className="text-lg font-semibold">{dept.name}</h3>
                     <p className="text-sm text-muted-foreground">
-                      {dept.emails.length} email(s) configurat(s)
+                      {dept.members.length} membro(s) • {dept.emails.length} email(s) de contacto
                     </p>
                   </div>
                   <div className="flex gap-2">
@@ -404,14 +384,14 @@ const Departments = () => {
                       <DialogTrigger asChild>
                         <Button size="sm" variant="outline">
                           <Mail className="w-4 h-4 mr-2" />
-                          Afegir Email
+                          Adicionar Email
                         </Button>
                       </DialogTrigger>
                       <DialogContent>
                         <DialogHeader>
-                          <DialogTitle>Afegir Email a {dept.name}</DialogTitle>
+                          <DialogTitle>Adicionar Email a {dept.name}</DialogTitle>
                           <DialogDescription>
-                            Introdueix l'adreça de correu electrònic
+                            Introduza o endereço de email do responsável
                           </DialogDescription>
                         </DialogHeader>
                         <div className="space-y-4">
@@ -422,11 +402,11 @@ const Departments = () => {
                               type="email"
                               value={newEmail}
                               onChange={(e) => setNewEmail(e.target.value)}
-                              placeholder="exemple@empresa.com"
+                              placeholder="exemplo@empresa.pt"
                             />
                           </div>
                           <Button onClick={handleAddEmail} className="w-full">
-                            Afegir
+                            Adicionar
                           </Button>
                         </div>
                       </DialogContent>
@@ -441,12 +421,29 @@ const Departments = () => {
                   </div>
                 </div>
 
+                {/* Members */}
+                {dept.members.length > 0 && (
+                  <div className="mb-4">
+                    <p className="text-sm font-medium text-muted-foreground mb-2">Membros:</p>
+                    <div className="flex flex-wrap gap-2">
+                      {dept.members.map((member) => (
+                        <Badge key={member.id} variant="secondary" className="gap-1">
+                          <User className="w-3 h-3" />
+                          {member.name || member.email}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Contact Emails */}
                 {dept.emails.length > 0 && (
                   <div className="space-y-2">
-                    <p className="text-sm font-medium text-muted-foreground">Emails:</p>
+                    <p className="text-sm font-medium text-muted-foreground">Emails de Contacto:</p>
                     <div className="flex flex-wrap gap-2">
                       {dept.emails.map((email) => (
-                        <Badge key={email} variant="secondary" className="gap-2">
+                        <Badge key={email} variant="outline" className="gap-2">
+                          <Mail className="w-3 h-3" />
                           {email}
                           <button
                             onClick={() => handleRemoveEmail(dept.id, email)}

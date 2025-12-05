@@ -603,6 +603,7 @@ export type Database = {
           active: boolean
           allowed_email_domains: Json | null
           created_at: string
+          department_id: string | null
           digest_email: string | null
           digest_hour: number | null
           email: string
@@ -632,6 +633,7 @@ export type Database = {
           active?: boolean
           allowed_email_domains?: Json | null
           created_at?: string
+          department_id?: string | null
           digest_email?: string | null
           digest_hour?: number | null
           email: string
@@ -661,6 +663,7 @@ export type Database = {
           active?: boolean
           allowed_email_domains?: Json | null
           created_at?: string
+          department_id?: string | null
           digest_email?: string | null
           digest_hour?: number | null
           email?: string
@@ -685,7 +688,15 @@ export type Database = {
           trello_list_name?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       providers: {
         Row: {
