@@ -18,7 +18,6 @@ import EmailAnalytics from "./pages/EmailAnalytics";
 import AuditLogs from "./pages/AuditLogs";
 import ApiKeys from "./pages/ApiKeys";
 import AdminControlPanel from "./pages/AdminControlPanel";
-import TrelloTasks from "./pages/TrelloTasks";
 import NotFound from "./pages/NotFound";
 
 // Lazy-loaded Renewals module (feature-flagged)
@@ -53,7 +52,6 @@ const App = () => (
           <Route path="/admin/audit-logs" element={<AuditLogs />} />
           <Route path="/admin/api-keys" element={<ApiKeys />} />
           <Route path="/admin/control-panel" element={<AdminControlPanel />} />
-          <Route path="/admin/trello-tasks" element={<TrelloTasks />} />
           
           {/* Renewals Module - Feature Flagged & Lazy Loaded */}
           {isFeatureEnabled('RENEWALS_MODULE_ENABLED') && (

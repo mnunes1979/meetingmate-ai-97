@@ -12,7 +12,7 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { Home, FileText, BarChart3, Building2, Users, Settings, Shield, Key, Server, Trello, CalendarCheck2 } from "lucide-react";
+import { Home, FileText, BarChart3, Building2, Users, Settings, Shield, Key, Server, CalendarCheck2 } from "lucide-react";
 import { isFeatureEnabled } from "@/lib/featureFlags";
 import { useUserAccess } from "@/hooks/useUserAccess";
 
@@ -20,7 +20,6 @@ const baseItems = [
   { title: "Dashboard", url: "/dashboard", icon: Home },
   { title: "Reuniões", url: "/admin", icon: FileText },
   { title: "Analítica de Email", url: "/email-analytics", icon: BarChart3 },
-  { title: "Tarefas Trello", url: "/admin/trello-tasks", icon: Trello },
   { title: "Departamentos", url: "/departments", icon: Building2 },
   { title: "Comerciais", url: "/admin/users", icon: Users },
   { title: "Logs de Segurança", url: "/admin/audit-logs", icon: Shield },
@@ -32,9 +31,9 @@ const baseItems = [
 // Add Renewals link if feature is enabled
 const items = isFeatureEnabled('RENEWALS_MODULE_ENABLED')
   ? [
-      ...baseItems.slice(0, 4), // Dashboard, Reuniões, Email, Trello
+      ...baseItems.slice(0, 3), // Dashboard, Reuniões, Email
       { title: "Renovações", url: "/renewals", icon: CalendarCheck2 },
-      ...baseItems.slice(4), // Rest of items
+      ...baseItems.slice(3), // Rest of items
     ]
   : baseItems;
 
