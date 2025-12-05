@@ -76,7 +76,7 @@ export const SummaryCard = ({ summary, sentiment, language, confidence }: Summar
         <div className="flex flex-wrap gap-2">
           <Badge variant="outline" className="gap-1.5 text-xs">
             <Globe className="w-3 h-3" />
-            {languageNames[language] || language.toUpperCase()}
+            {languageNames[language] || (language ? language.toUpperCase() : 'PT')}
           </Badge>
           <Badge variant="outline" className={`gap-1.5 text-xs ${getSentimentColor()}`}>
             {getSentimentIcon()}
