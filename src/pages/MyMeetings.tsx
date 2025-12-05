@@ -1,12 +1,11 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { useTranslation } from "react-i18next";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, FileText, Calendar, User, LogOut, Mic2, BarChart3, Settings as SettingsIcon } from "lucide-react";
+import { Loader2, FileText, Calendar, User, LogOut, Mic2, BarChart3, Settings as SettingsIcon, Target, AlertTriangle, CheckSquare } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { LanguageSelector } from "@/components/LanguageSelector";
 import { MobileNav } from "@/components/MobileNav";
@@ -29,11 +28,15 @@ interface MeetingNote {
   customer_company: string | null;
   language: string;
   sentiment: string;
+  sentiment_score: number | null;
+  opportunities: string[] | null;
+  risks: string[] | null;
+  action_items: Array<{ task: string; assignee: string; priority: string }> | null;
+  topics: string[] | null;
   raw_llm_output: any;
 }
 
 const MyMeetings = () => {
-  const { t } = useTranslation();
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [notes, setNotes] = useState<MeetingNote[]>([]);
@@ -71,8 +74,8 @@ const MyMeetings = () => {
         // Redirect renewals_only users to renewals page
         if (profile.access_type === 'renewals_only') {
           toast({
-            title: t('myMeetings.accessRestricted', 'Acesso Restrito'),
-            description: t('myMeetings.renewalsOnly', 'Apenas tem permissão para aceder à área de Renovações'),
+            title: "Acesso Restrito",
+            description: "Apenas tem permissão para aceder à área de Renovações",
             variant: "destructive",
           });
           navigate("/renewals");
@@ -92,7 +95,7 @@ const MyMeetings = () => {
     try {
       let query = supabase
         .from("meeting_notes")
-        .select("*")
+        .select("id, created_at, meeting_datetime, sales_rep_name, customer_name, customer_company, language, sentiment, sentiment_score, opportunities, risks, action_items, topics, raw_llm_output")
         .eq("user_id", userId)
         .is("deleted_at", null);
 
@@ -106,12 +109,12 @@ const MyMeetings = () => {
       const { data, error } = await query.order("created_at", { ascending: false });
 
       if (error) throw error;
-      setNotes(data || []);
+      setNotes((data || []) as MeetingNote[]);
     } catch (error: any) {
       console.error("Error loading notes:", error);
       toast({
-        title: t('common.error'),
-        description: t('myMeetings.loadError', 'Erro ao carregar as suas reuniões'),
+        title: "Erro",
+        description: "Erro ao carregar as suas reuniões",
         variant: "destructive",
       });
     }
@@ -123,7 +126,12 @@ const MyMeetings = () => {
     }
   }, [dateFilter]);
 
-  const getSentimentColor = (sentiment: string) => {
+  const getSentimentColor = (sentiment: string, score?: number | null) => {
+    if (score !== null && score !== undefined) {
+      if (score >= 70) return 'bg-sentiment-positive/10 text-sentiment-positive border-sentiment-positive/20';
+      if (score >= 40) return 'bg-sentiment-neutral/10 text-sentiment-neutral border-sentiment-neutral/20';
+      return 'bg-sentiment-negative/10 text-sentiment-negative border-sentiment-negative/20';
+    }
     switch (sentiment) {
       case 'positive':
         return 'bg-sentiment-positive/10 text-sentiment-positive border-sentiment-positive/20';
@@ -136,11 +144,16 @@ const MyMeetings = () => {
     }
   };
 
-  const getSentimentLabel = (sentiment: string) => {
+  const getSentimentLabel = (sentiment: string, score?: number | null) => {
+    if (score !== null && score !== undefined) {
+      if (score >= 70) return `${score}/100 Positivo`;
+      if (score >= 40) return `${score}/100 Neutro`;
+      return `${score}/100 Negativo`;
+    }
     switch (sentiment) {
-      case 'positive': return t('sentiment.positive', 'Positivo');
-      case 'neutral': return t('sentiment.neutral', 'Neutro');
-      case 'negative': return t('sentiment.negative', 'Negativo');
+      case 'positive': return 'Positivo';
+      case 'neutral': return 'Neutro';
+      case 'negative': return 'Negativo';
       default: return sentiment;
     }
   };
@@ -161,27 +174,26 @@ const MyMeetings = () => {
             <div className="flex items-center gap-3">
               <MobileNav userEmail={user?.email} accessType={userProfile?.access_type} />
               <div>
-                <h1 className="text-lg md:text-2xl font-bold">{t('myMeetings.title', 'As Minhas Reuniões')}</h1>
+                <h1 className="text-lg md:text-2xl font-bold">As Minhas Reuniões</h1>
                 <p className="text-xs md:text-sm text-muted-foreground hidden sm:block">{user?.email}</p>
               </div>
             </div>
             <div className="hidden md:flex items-center gap-2">
-              <ThemeToggle />
               <Button variant="ghost" size="sm" onClick={() => navigate("/")}>
                 <Mic2 className="w-4 h-4 mr-2" />
-                {t('navigation.recordNote', 'Gravar')}
+                Gravar
               </Button>
               <Button variant="ghost" size="sm" onClick={() => navigate("/email-analytics")}>
                 <BarChart3 className="w-4 h-4 mr-2" />
-                {t('navigation.analytics', 'Análises')}
+                Análises
               </Button>
               <Button variant="ghost" size="sm" onClick={() => navigate("/settings")}>
                 <SettingsIcon className="w-4 h-4 mr-2" />
-                {t('navigation.settings', 'Definições')}
+                Definições
               </Button>
               <ThemeToggle />
               <LanguageSelector />
-              <Button variant="ghost" size="icon" onClick={handleSignOut} title={t('navigation.signOut', 'Terminar Sessão')}>
+              <Button variant="ghost" size="icon" onClick={handleSignOut} title="Terminar Sessão">
                 <LogOut className="w-5 h-5" />
               </Button>
             </div>
@@ -195,21 +207,21 @@ const MyMeetings = () => {
       <main className="container mx-auto px-3 sm:px-4 py-4 sm:py-8 max-w-6xl">
         <div className="mb-4 sm:mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <h2 className="text-lg sm:text-xl font-semibold">
-            {t('myMeetings.history', 'Histórico')} ({notes.length})
+            Histórico ({notes.length})
           </h2>
           <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto">
             <Select value={dateFilter} onValueChange={setDateFilter}>
               <SelectTrigger className="w-[140px]">
-                <SelectValue placeholder={t('myMeetingsFilters.last7Days', 'Últimos 7 dias')} />
+                <SelectValue placeholder="Últimos 7 dias" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="7">{t('myMeetingsFilters.last7Days', 'Últimos 7 dias')}</SelectItem>
-                <SelectItem value="30">{t('myMeetingsFilters.last30Days', 'Últimos 30 dias')}</SelectItem>
-                <SelectItem value="all">{t('myMeetingsFilters.allTime', 'Todo o tempo')}</SelectItem>
+                <SelectItem value="7">Últimos 7 dias</SelectItem>
+                <SelectItem value="30">Últimos 30 dias</SelectItem>
+                <SelectItem value="all">Todo o período</SelectItem>
               </SelectContent>
             </Select>
             <Button onClick={() => loadNotes(user.id)} variant="outline" size="sm">
-              {t('myMeetings.refresh', 'Atualizar')}
+              Atualizar
             </Button>
           </div>
         </div>
@@ -217,19 +229,27 @@ const MyMeetings = () => {
         {notes.length === 0 ? (
           <Card className="p-6 sm:p-8 text-center">
             <FileText className="w-10 h-10 sm:w-12 sm:h-12 text-muted-foreground mx-auto mb-4" />
-            <p className="text-sm sm:text-base text-muted-foreground">{t('myMeetings.noMeetings', 'Ainda não tem reuniões gravadas')}</p>
+            <p className="text-sm sm:text-base text-muted-foreground">Ainda não tem reuniões gravadas</p>
+            <Button className="mt-4" onClick={() => navigate("/")}>
+              <Mic2 className="w-4 h-4 mr-2" />
+              Gravar Nova Reunião
+            </Button>
           </Card>
         ) : (
           <div className="space-y-3 sm:space-y-4">
             {notes.map((note) => {
+              const opportunities = note.opportunities as string[] | null;
+              const risks = note.risks as string[] | null;
+              const actionItems = note.action_items as Array<{ task: string; assignee: string; priority: string }> | null;
+              const topics = note.topics as string[] | null;
+              
               const emailCount = note.raw_llm_output?.email_drafts?.length || 0;
               const calendarCount = note.raw_llm_output?.calendar_events?.length || 0;
-              const hasActions = emailCount > 0 || calendarCount > 0;
-
+              
               return (
                 <Card
                   key={note.id}
-                  className="p-4 sm:p-6 hover:shadow-lg transition-shadow cursor-pointer"
+                  className="p-4 sm:p-6 hover:shadow-lg transition-shadow cursor-pointer hover:border-primary/50"
                   onClick={() => navigate(`/meeting/${note.id}`)}
                 >
                   <div className="flex flex-col sm:flex-row items-start justify-between gap-3 sm:gap-4">
@@ -243,8 +263,8 @@ const MyMeetings = () => {
                                 {format(new Date(note.meeting_datetime), "dd/MM/yyyy HH:mm")}
                               </div>
                             )}
-                            <Badge variant="outline" className={`${getSentimentColor(note.sentiment)} text-xs`}>
-                              {getSentimentLabel(note.sentiment)}
+                            <Badge variant="outline" className={`${getSentimentColor(note.sentiment, note.sentiment_score)} text-xs`}>
+                              {getSentimentLabel(note.sentiment, note.sentiment_score)}
                             </Badge>
                           </div>
                           
@@ -263,30 +283,63 @@ const MyMeetings = () => {
                           
                           {note.sales_rep_name && (
                             <div className="text-xs sm:text-sm text-muted-foreground">
-                              {t('myMeetings.salesRep', 'Comercial:')} {note.sales_rep_name}
+                              Comercial: {note.sales_rep_name}
+                            </div>
+                          )}
+
+                          {/* Topics preview */}
+                          {topics && topics.length > 0 && (
+                            <div className="flex flex-wrap gap-1 mt-2">
+                              {topics.slice(0, 3).map((topic, idx) => (
+                                <Badge key={idx} variant="secondary" className="text-xs bg-primary/10 text-primary">
+                                  {topic}
+                                </Badge>
+                              ))}
+                              {topics.length > 3 && (
+                                <Badge variant="secondary" className="text-xs">
+                                  +{topics.length - 3}
+                                </Badge>
+                              )}
                             </div>
                           )}
                         </div>
                       </div>
 
-                      {hasActions && (
-                        <div className="flex gap-2 flex-wrap pt-2">
-                          {emailCount > 0 && (
-                            <Badge variant="secondary" className="bg-action-email/10 text-action-email text-xs">
-                              {emailCount} {emailCount !== 1 ? t('myMeetings.emails', 'Emails') : t('myMeetings.email', 'Email')}
-                            </Badge>
-                          )}
-                          {calendarCount > 0 && (
-                            <Badge variant="secondary" className="bg-action-calendar/10 text-action-calendar text-xs">
-                              {calendarCount} {calendarCount !== 1 ? t('myMeetings.events', 'Eventos') : t('myMeetings.event', 'Evento')}
-                            </Badge>
-                          )}
-                        </div>
-                      )}
+                      {/* Metrics badges */}
+                      <div className="flex gap-2 flex-wrap pt-2">
+                        {opportunities && opportunities.length > 0 && (
+                          <Badge variant="secondary" className="bg-sentiment-positive/10 text-sentiment-positive text-xs">
+                            <Target className="w-3 h-3 mr-1" />
+                            {opportunities.length} {opportunities.length === 1 ? 'Oportunidade' : 'Oportunidades'}
+                          </Badge>
+                        )}
+                        {risks && risks.length > 0 && (
+                          <Badge variant="secondary" className="bg-sentiment-negative/10 text-sentiment-negative text-xs">
+                            <AlertTriangle className="w-3 h-3 mr-1" />
+                            {risks.length} {risks.length === 1 ? 'Risco' : 'Riscos'}
+                          </Badge>
+                        )}
+                        {actionItems && actionItems.length > 0 && (
+                          <Badge variant="secondary" className="bg-amber-500/10 text-amber-500 text-xs">
+                            <CheckSquare className="w-3 h-3 mr-1" />
+                            {actionItems.length} {actionItems.length === 1 ? 'Ação' : 'Ações'}
+                          </Badge>
+                        )}
+                        {emailCount > 0 && (
+                          <Badge variant="secondary" className="bg-action-email/10 text-action-email text-xs">
+                            {emailCount} {emailCount !== 1 ? 'Emails' : 'Email'}
+                          </Badge>
+                        )}
+                        {calendarCount > 0 && (
+                          <Badge variant="secondary" className="bg-action-calendar/10 text-action-calendar text-xs">
+                            {calendarCount} {calendarCount !== 1 ? 'Eventos' : 'Evento'}
+                          </Badge>
+                        )}
+                      </div>
                     </div>
                     
                     <Button variant="ghost" size="sm" className="w-full sm:w-auto text-xs sm:text-sm">
-                      {t('myMeetings.viewDetails', 'Ver Detalhes')}
+                      Ver Detalhes
                     </Button>
                   </div>
                 </Card>
