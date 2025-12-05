@@ -19,33 +19,35 @@ export default function AdminLayout({ title, children }: AdminLayoutProps) {
 
   return (
     <SidebarProvider>
-      <div className="min-h-screen flex w-full">
+      <div className="min-h-screen flex w-full bg-background">
         <AppSidebar />
 
-        <SidebarInset>
-          <header className="sticky top-0 z-10 border-b border-border/50 bg-background/80 backdrop-blur-sm">
-            <div className="flex items-center justify-between px-3 sm:px-4 py-3">
-              <div className="flex items-center gap-2">
-                <SidebarTrigger />
-                <h1 className="text-lg md:text-xl font-semibold">{title}</h1>
+        <SidebarInset className="flex-1">
+          {/* Floating Glass Header */}
+          <header className="sticky top-0 z-50 floating-header">
+            <div className="flex items-center justify-between px-4 sm:px-6 py-4">
+              <div className="flex items-center gap-3">
+                <SidebarTrigger className="hover:bg-muted/50 rounded-xl transition-colors" />
+                <h1 className="text-xl md:text-2xl font-semibold tracking-tight">{title}</h1>
               </div>
               <div className="flex items-center gap-2">
                 <NotificationBadge />
                 <ThemeToggle />
-                <Button variant="ghost" size="sm" onClick={() => navigate("/")}>
+                <Button variant="ghost" size="sm" onClick={() => navigate("/")} className="hidden sm:flex">
                   <Mic2 className="w-4 h-4 mr-2" />
                   Gravar
                 </Button>
-                <Button variant="ghost" size="icon" onClick={handleSignOut} title="Sair">
+                <Button variant="ghost" size="icon" onClick={handleSignOut} title="Sair" className="rounded-xl">
                   <LogOut className="w-5 h-5" />
                 </Button>
               </div>
             </div>
           </header>
 
-          <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-8">
+          {/* Main Content Area */}
+          <main className="px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
             {children}
-          </div>
+          </main>
         </SidebarInset>
       </div>
     </SidebarProvider>

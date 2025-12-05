@@ -43,12 +43,12 @@ export const SentimentTrendChart = ({
       const score = payload[0].value;
       const dataPoint = payload[0].payload;
       return (
-        <div className="bg-popover border border-border rounded-lg p-3 shadow-lg">
-          <p className="text-sm font-medium">{formatDate(label || '')}</p>
-          <p className="text-lg font-bold" style={{ color: getColor(score) }}>
+        <div className="bg-card/95 backdrop-blur-sm border border-border/50 rounded-2xl p-4 shadow-lg">
+          <p className="text-sm font-medium text-muted-foreground">{formatDate(label || '')}</p>
+          <p className="text-2xl font-bold mt-1" style={{ color: getColor(score) }}>
             {score}/100
           </p>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-xs text-muted-foreground mt-1">
             {dataPoint.count} reunião(ões)
           </p>
         </div>
@@ -59,12 +59,14 @@ export const SentimentTrendChart = ({
 
   if (data.length === 0) {
     return (
-      <Card className="p-4 sm:p-6 card-gradient border-border/50">
-        <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-          <TrendingUp className="w-5 h-5 text-primary" />
+      <Card className="p-6 sm:p-8">
+        <h3 className="text-lg font-semibold mb-4 flex items-center gap-3 tracking-tight">
+          <div className="p-2 rounded-xl bg-primary/10">
+            <TrendingUp className="w-5 h-5 text-primary" />
+          </div>
           {title}
         </h3>
-        <div className="h-[250px] flex items-center justify-center">
+        <div className="h-[280px] flex items-center justify-center">
           <p className="text-sm text-muted-foreground">
             Dados insuficientes para mostrar tendência
           </p>
@@ -79,25 +81,29 @@ export const SentimentTrendChart = ({
   );
 
   return (
-    <Card className="p-4 sm:p-6 card-gradient border-border/50">
-      <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-        <TrendingUp className="w-5 h-5 text-primary" />
+    <Card className="p-6 sm:p-8">
+      <h3 className="text-lg font-semibold mb-6 flex items-center gap-3 tracking-tight">
+        <div className="p-2 rounded-xl bg-primary/10">
+          <TrendingUp className="w-5 h-5 text-primary" />
+        </div>
         {title}
       </h3>
-      <div className="h-[250px]">
+      <div className="h-[280px]">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={data} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
-            <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+            <CartesianGrid strokeDasharray="3 3" className="stroke-border/50" />
             <XAxis 
               dataKey="date" 
               tickFormatter={formatDate}
               tick={{ fontSize: 12 }}
               className="text-muted-foreground"
+              stroke="hsl(var(--border))"
             />
             <YAxis 
               domain={[0, 100]}
               tick={{ fontSize: 12 }}
               className="text-muted-foreground"
+              stroke="hsl(var(--border))"
             />
             <Tooltip content={<CustomTooltip />} />
             <ReferenceLine 
@@ -117,25 +123,25 @@ export const SentimentTrendChart = ({
               type="monotone"
               dataKey="score"
               stroke="hsl(var(--primary))"
-              strokeWidth={2}
-              dot={{ fill: "hsl(var(--primary))", strokeWidth: 2 }}
-              activeDot={{ r: 6 }}
+              strokeWidth={3}
+              dot={{ fill: "hsl(var(--primary))", strokeWidth: 2, r: 4 }}
+              activeDot={{ r: 8, fill: "hsl(var(--primary))" }}
             />
           </LineChart>
         </ResponsiveContainer>
       </div>
-      <div className="flex justify-center gap-4 mt-4 text-xs">
-        <div className="flex items-center gap-1">
+      <div className="flex justify-center gap-6 mt-6 text-xs">
+        <div className="flex items-center gap-2">
           <div className="w-3 h-3 rounded-full bg-sentiment-positive" />
-          <span>Bom (70+)</span>
+          <span className="text-muted-foreground">Bom (70+)</span>
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-2">
           <div className="w-3 h-3 rounded-full bg-sentiment-neutral" />
-          <span>Neutro (40-69)</span>
+          <span className="text-muted-foreground">Neutro (40-69)</span>
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-2">
           <div className="w-3 h-3 rounded-full bg-sentiment-negative" />
-          <span>Crítico (&lt;40)</span>
+          <span className="text-muted-foreground">Crítico (&lt;40)</span>
         </div>
       </div>
     </Card>

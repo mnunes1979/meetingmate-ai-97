@@ -255,9 +255,9 @@ export const VoiceNoteRecorder = ({ onRecordingComplete, isProcessing }: VoiceNo
   };
 
   return (
-    <Card className="p-4 sm:p-6 md:p-8 space-y-4 sm:space-y-6 card-gradient border-border/50">
+    <Card className="p-6 sm:p-8 space-y-6">
       <div className="text-center space-y-2">
-        <h2 className="text-xl sm:text-2xl font-semibold">
+        <h2 className="text-xl sm:text-2xl font-semibold tracking-tight">
           {t('voiceNote.title', 'Nota de Voz - Resumo')}
         </h2>
         <p className="text-sm sm:text-base text-muted-foreground">

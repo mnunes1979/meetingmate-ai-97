@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, BarChart3, Target, TrendingUp, CheckSquare, Users, Calendar, Mail } from "lucide-react";
+import { Loader2, BarChart3, Target, TrendingUp, CheckSquare, Users, Mail } from "lucide-react";
 import AdminLayout from "@/components/admin/AdminLayout";
 import { MetricCard } from "@/components/dashboard/MetricCard";
 import { SentimentGauge } from "@/components/dashboard/SentimentGauge";
@@ -11,7 +11,7 @@ import { SentimentTrendChart } from "@/components/dashboard/SentimentTrendChart"
 import { TopicsBarChart } from "@/components/dashboard/TopicsBarChart";
 import { ActionItemsWidget } from "@/components/dashboard/ActionItemsWidget";
 import { Card } from "@/components/ui/card";
-import { format, subDays, startOfDay, parseISO } from "date-fns";
+import { format, subDays } from "date-fns";
 
 interface MeetingData {
   id: string;
@@ -58,7 +58,7 @@ interface DashboardMetrics {
 }
 
 const Dashboard = () => {
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<{ id: string; email?: string } | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
   const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
@@ -252,95 +252,102 @@ const Dashboard = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="w-10 h-10 animate-spin text-primary" />
+          <p className="text-muted-foreground">A carregar dashboard...</p>
+        </div>
       </div>
     );
   }
 
   if (!isAdmin) return null;
 
-  const getSentimentColor = (score: number) => {
-    if (score >= 70) return "text-sentiment-positive";
-    if (score >= 40) return "text-sentiment-neutral";
-    return "text-sentiment-negative";
-  };
-
   return (
     <AdminLayout title="Dashboard de Business Intelligence">
-      <div className="max-w-7xl mx-auto space-y-6">
-        {/* Overview Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-          <MetricCard
-            title="Total de Reuniões"
-            value={metrics?.totalMeetings || 0}
-            icon={BarChart3}
-          />
-          <MetricCard
-            title="Oportunidades Detetadas"
-            value={metrics?.totalOpportunities || 0}
-            icon={Target}
-            colorClass="text-sentiment-positive"
-          />
-          <Card className="p-4 sm:p-6 card-gradient border-border/50">
-            <div className="flex items-center justify-between">
-              <div className="space-y-1">
-                <p className="text-xs sm:text-sm text-muted-foreground">Sentimento Médio</p>
+      <div className="max-w-7xl mx-auto space-y-8">
+        {/* iOS Widget Grid - Overview Cards */}
+        <section className="animate-fade-in">
+          <h2 className="text-lg font-semibold text-muted-foreground mb-4 tracking-tight">Visão Geral</h2>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+            <MetricCard
+              title="Total de Reuniões"
+              value={metrics?.totalMeetings || 0}
+              icon={BarChart3}
+            />
+            <MetricCard
+              title="Oportunidades"
+              value={metrics?.totalOpportunities || 0}
+              icon={Target}
+              colorClass="text-sentiment-positive"
+            />
+            <Card className="widget-card">
+              <div className="space-y-3">
+                <p className="text-sm text-muted-foreground font-medium">Sentimento Médio</p>
                 <SentimentGauge score={metrics?.avgSentiment || 50} />
               </div>
-            </div>
-          </Card>
-          <MetricCard
-            title="Ações Pendentes"
-            value={metrics?.pendingActions || 0}
-            icon={CheckSquare}
-            colorClass={metrics?.pendingActions && metrics.pendingActions > 5 ? "text-amber-500" : undefined}
-          />
-        </div>
+            </Card>
+            <MetricCard
+              title="Ações Pendentes"
+              value={metrics?.pendingActions || 0}
+              icon={CheckSquare}
+              colorClass={metrics?.pendingActions && metrics.pendingActions > 5 ? "text-amber-500" : undefined}
+            />
+          </div>
+        </section>
 
         {/* Secondary Metrics */}
-        <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-          <MetricCard
-            title="E-mails Enviados"
-            value={metrics?.totalEmails || 0}
-            icon={Mail}
-          />
-          <MetricCard
-            title="Utilizadores Ativos"
-            value={metrics?.activeUsers || 0}
-            icon={Users}
-          />
-          <MetricCard
-            title="Alertas de Risco"
-            value={metrics?.risks?.length || 0}
-            icon={TrendingUp}
-            colorClass={metrics?.risks && metrics.risks.length > 0 ? "text-sentiment-negative" : "text-sentiment-positive"}
-          />
-        </div>
+        <section className="animate-fade-in" style={{ animationDelay: '0.1s' }}>
+          <h2 className="text-lg font-semibold text-muted-foreground mb-4 tracking-tight">Métricas Secundárias</h2>
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+            <MetricCard
+              title="E-mails Enviados"
+              value={metrics?.totalEmails || 0}
+              icon={Mail}
+            />
+            <MetricCard
+              title="Utilizadores Ativos"
+              value={metrics?.activeUsers || 0}
+              icon={Users}
+            />
+            <MetricCard
+              title="Alertas de Risco"
+              value={metrics?.risks?.length || 0}
+              icon={TrendingUp}
+              colorClass={metrics?.risks && metrics.risks.length > 0 ? "text-sentiment-negative" : "text-sentiment-positive"}
+            />
+          </div>
+        </section>
 
         {/* Charts Row */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-          <SentimentTrendChart 
-            data={metrics?.sentimentTrend || []} 
-            title="Tendência de Sentimento (30 dias)"
-          />
-          <TopicsBarChart 
-            data={metrics?.topicsData || []} 
-            title="Tópicos Mais Discutidos"
-          />
-        </div>
+        <section className="animate-fade-in" style={{ animationDelay: '0.2s' }}>
+          <h2 className="text-lg font-semibold text-muted-foreground mb-4 tracking-tight">Análise Visual</h2>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+            <SentimentTrendChart 
+              data={metrics?.sentimentTrend || []} 
+              title="Tendência de Sentimento (30 dias)"
+            />
+            <TopicsBarChart 
+              data={metrics?.topicsData || []} 
+              title="Tópicos Mais Discutidos"
+            />
+          </div>
+        </section>
 
-        {/* Action Items and Risks Row */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-          <ActionItemsWidget 
-            items={metrics?.actionItems || []} 
-            title="Ações Pendentes"
-          />
-          <RiskAlertWidget 
-            risks={metrics?.risks || []} 
-            title="Alertas de Risco"
-          />
-        </div>
+        {/* Action Items and Risks Row - iOS Settings List Style */}
+        <section className="animate-fade-in" style={{ animationDelay: '0.3s' }}>
+          <h2 className="text-lg font-semibold text-muted-foreground mb-4 tracking-tight">Ações & Alertas</h2>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+            <ActionItemsWidget 
+              items={metrics?.actionItems || []} 
+              title="Ações Pendentes"
+            />
+            <RiskAlertWidget 
+              risks={metrics?.risks || []} 
+              title="Alertas de Risco"
+            />
+          </div>
+        </section>
       </div>
     </AdminLayout>
   );
