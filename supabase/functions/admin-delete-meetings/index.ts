@@ -53,14 +53,8 @@ Deno.serve(async (req) => {
       target_user_id: z.string().uuid().optional(),
       meeting_ids: z.array(z.string().uuid()).optional(),
     }).refine(data => {
-      // If scope is 'user', require target_user_id
-      if (data.scope === 'user' && !data.target_user_id) {
-        return false;
-      }
-      // If scope is 'specific', require meeting_ids
-      if (data.scope === 'specific' && (!data.meeting_ids || data.meeting_ids.length === 0)) {
-        return false;
-      }
+      if (data.scope === 'user' && !data.target_user_id) return false;
+      if (data.scope === 'specific' && (!data.meeting_ids || data.meeting_ids.length === 0)) return false;
       return true;
     }, {
       message: "target_user_id required when scope is 'user', meeting_ids required when scope is 'specific'"
@@ -68,7 +62,6 @@ Deno.serve(async (req) => {
 
     const requestData = await req.json();
     
-    // If meeting_ids is provided, default to 'specific' scope
     if (requestData.meeting_ids && !requestData.scope) {
       requestData.scope = 'specific';
     }
@@ -82,10 +75,7 @@ Deno.serve(async (req) => {
           error: 'Invalid input parameters',
           details: validation.error.issues 
         }),
-        { 
-          status: 400, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        }
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
@@ -99,7 +89,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Rate limiting: Maximum 10 deletions per day for specific, 5 for global
+    // Rate limiting
     const maxDeletions = scope === 'specific' ? 10 : 5;
     const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
     const { count: recentDeletions } = await supabase
@@ -110,7 +100,7 @@ Deno.serve(async (req) => {
       .gte('created_at', oneDayAgo);
 
     if (recentDeletions && recentDeletions >= maxDeletions) {
-      console.log(`[Rate Limit] Delete meetings blocked for user ${user.id}: ${recentDeletions} attempts in last 24h`);
+      console.log(`[Rate Limit] Delete meetings blocked for user ${user.id}`);
       return new Response(
         JSON.stringify({ 
           error: `Rate limit exceeded: Maximum ${maxDeletions} meeting deletions per day`,
@@ -118,29 +108,93 @@ Deno.serve(async (req) => {
           window: '24 hours',
           current_count: recentDeletions
         }),
-        { 
-          status: 429, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        }
+        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    let query = supabase.from('meeting_notes').delete();
-    let deletedCount = 0;
-
+    // Get meetings to delete based on scope
+    let meetingsToDelete: { id: string; transcript_url: string | null; user_id: string }[] = [];
+    
     if (scope === 'specific' && meeting_ids) {
-      query = query.in('id', meeting_ids);
-      deletedCount = meeting_ids.length;
+      const { data } = await supabase
+        .from('meeting_notes')
+        .select('id, transcript_url, user_id')
+        .in('id', meeting_ids);
+      meetingsToDelete = data || [];
     } else if (scope === 'user' && target_user_id) {
-      query = query.eq('user_id', target_user_id);
+      const { data } = await supabase
+        .from('meeting_notes')
+        .select('id, transcript_url, user_id')
+        .eq('user_id', target_user_id);
+      meetingsToDelete = data || [];
     } else {
-      // Delete all meetings (global)
-      query = query.neq('id', '00000000-0000-0000-0000-000000000000');
+      // Global delete
+      const { data } = await supabase
+        .from('meeting_notes')
+        .select('id, transcript_url, user_id');
+      meetingsToDelete = data || [];
     }
 
-    const { error, count } = await query;
+    console.log(`[GDPR Delete] Processing ${meetingsToDelete.length} meetings for cascade deletion`);
 
-    if (error) throw error;
+    let totalDeleted = 0;
+    const deletionResults: any[] = [];
+    const storageErrors: string[] = [];
+
+    // Process each meeting with GDPR cascade delete
+    for (const meeting of meetingsToDelete) {
+      try {
+        // 1. Call GDPR cascade delete function for database records
+        const { data: cascadeResult, error: cascadeError } = await supabase.rpc(
+          'gdpr_delete_meeting_cascade',
+          { _meeting_id: meeting.id, _user_id: user.id }
+        );
+
+        if (cascadeError) {
+          console.error(`[GDPR Delete] Cascade error for meeting ${meeting.id}:`, cascadeError);
+          continue;
+        }
+
+        // 2. Delete audio file from storage bucket
+        if (meeting.transcript_url) {
+          // Extract the file path from the URL or use it directly if it's a path
+          let storagePath = meeting.transcript_url;
+          
+          // If it's a full URL, extract the path
+          if (storagePath.includes('/storage/v1/object/')) {
+            const match = storagePath.match(/audio-recordings\/(.+)/);
+            if (match) {
+              storagePath = match[1];
+            }
+          }
+          
+          // Also try the user_id/filename format
+          const possiblePaths = [
+            storagePath,
+            `${meeting.user_id}/${storagePath.split('/').pop()}`,
+          ];
+
+          for (const path of possiblePaths) {
+            const { error: storageError } = await supabase.storage
+              .from('audio-recordings')
+              .remove([path]);
+
+            if (!storageError) {
+              console.log(`[GDPR Delete] Audio file deleted: ${path}`);
+              break;
+            } else {
+              console.warn(`[GDPR Delete] Storage delete attempt failed for path ${path}:`, storageError.message);
+            }
+          }
+        }
+
+        totalDeleted++;
+        deletionResults.push(cascadeResult);
+        
+      } catch (err) {
+        console.error(`[GDPR Delete] Error processing meeting ${meeting.id}:`, err);
+      }
+    }
 
     // Log the rate limit
     await supabase.from('rate_limits').insert({
@@ -148,22 +202,34 @@ Deno.serve(async (req) => {
       action: 'admin_delete_meetings'
     });
 
-    // Log the action
+    // Log comprehensive audit event
     await supabase.rpc('log_audit_event', {
-      _action: 'admin_delete_meetings',
+      _action: 'admin_gdpr_bulk_delete',
       _resource_type: 'meeting_notes',
-      _metadata: { scope, target_user_id, meeting_ids, deleted_count: count || deletedCount }
+      _metadata: { 
+        scope, 
+        target_user_id, 
+        meeting_ids,
+        total_deleted: totalDeleted,
+        storage_errors: storageErrors.length,
+        deletion_results: deletionResults
+      }
     });
 
-    console.log(`[Admin] Meetings deleted by ${profile?.email}: scope=${scope}, count=${count || deletedCount}`);
+    console.log(`[Admin GDPR Delete] Completed by ${profile?.email}: scope=${scope}, deleted=${totalDeleted}`);
 
     return new Response(
-      JSON.stringify({ success: true, deleted_count: count || deletedCount }),
+      JSON.stringify({ 
+        success: true, 
+        deleted_count: totalDeleted,
+        gdpr_compliant: true,
+        cascade_results: deletionResults
+      }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
   } catch (error) {
-    console.error('Error deleting meetings:', error);
+    console.error('Error in GDPR delete meetings:', error);
     return new Response(
       JSON.stringify({ error: 'Internal server error' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

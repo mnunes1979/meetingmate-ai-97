@@ -40,7 +40,16 @@
     "recording": "A gravar...",
     "stopRecording": "Parar gravação",
     "retake": "Voltar a gravar",
-    "process": "Processar Gravação"
+    "process": "Processar Gravação",
+    "title": "Gravar Reunião",
+    "subtitle": "Prima o microfone para começar a gravar",
+    "startRecording": "Iniciar Gravação",
+    "micError": "Erro de Microfone",
+    "micErrorDesc": "Não foi possível aceder ao microfone. Verifique as permissões.",
+    "audioTooShort": "Áudio demasiado curto. Por favor, grave pelo menos 5 segundos com voz clara.",
+    "audioNotAvailable": "Erro: áudio não disponível. Por favor, grave novamente.",
+    "consentLabel": "Declaro que tenho o consentimento de todos os participantes para gravar e processar esta reunião, em conformidade com o RGPD.",
+    "consentRequired": "Por favor, confirme o consentimento antes de gravar"
   },
   "processing": {
     "uploading": "A carregar áudio...",
