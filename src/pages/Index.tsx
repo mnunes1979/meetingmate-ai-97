@@ -354,7 +354,7 @@ const Index = () => {
           .insert({
             user_id: user.id,
             sales_rep_name: salesRepName,
-            language: processData.language,
+            language: transcriptData.language || 'pt',
             sentiment: processData.sentiment,
             sentiment_confidence: processData.sentiment_confidence,
             transcript_url: publicUrl,
