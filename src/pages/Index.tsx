@@ -16,7 +16,6 @@ import { useToast } from "@/hooks/use-toast";
 import { Mic2, LogIn, Building2, FileText, BarChart3, Settings } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { MobileNav } from "@/components/MobileNav";
-import { LanguageSelector } from "@/components/LanguageSelector";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { retryWithBackoff, parseEdgeFunctionError, TimeoutError, RateLimitError, PaymentRequiredError } from "@/lib/retry";
 import logger from "@/lib/logger";
@@ -857,7 +856,6 @@ const Index = () => {
                   )}
                   <div className="hidden sm:flex items-center gap-2">
                     <ThemeToggle />
-                    <LanguageSelector />
                   </div>
                   <Button
                     variant="outline"
