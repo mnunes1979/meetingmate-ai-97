@@ -6,38 +6,6 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Define known API keys and their metadata
-const API_KEYS_REGISTRY = [
-  {
-    name: "OPENAI_API_KEY",
-    service: "OpenAI",
-    description: "Chave API OpenAI para transcrição e análise de reuniões",
-    validationEndpoint: "https://api.openai.com/v1/models",
-    category: "AI Services"
-  },
-  {
-    name: "RESEND_API_KEY",
-    service: "Resend",
-    description: "Chave API Resend para envio de emails",
-    validationEndpoint: "https://api.resend.com/emails",
-    category: "Email Services"
-  },
-  {
-    name: "RESEND_FROM",
-    service: "Resend",
-    description: "Email de remetente padrão para Resend",
-    validationEndpoint: null,
-    category: "Email Services"
-  },
-  {
-    name: "RESEND_WEBHOOK_SECRET",
-    service: "Resend",
-    description: "Webhook secret para validação de eventos Resend",
-    validationEndpoint: null,
-    category: "Email Services"
-  }
-];
-
 const handler = async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -52,14 +20,12 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Decode JWT from header (verify_jwt=true already validated the token)
     const token = authHeader.replace('Bearer ', '').trim();
     let userId: string | null = null;
     try {
       const payload = JSON.parse(atob(token.split('.')[1] || ''));
       userId = payload.sub || null;
     } catch (_) {
-      // If decoding fails, treat as unauthorized
       return new Response(
         JSON.stringify({ error: 'Unauthorized' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -73,12 +39,12 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Verify admin role
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
+    // Check admin role
     const { data: roles } = await supabaseAdmin
       .from('user_roles')
       .select('role')
@@ -92,31 +58,42 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Get all API keys with masked values
-    const apiKeysInfo = API_KEYS_REGISTRY.map(keyConfig => {
-      const value = Deno.env.get(keyConfig.name);
-      const exists = !!value;
+    // Fetch API keys from database
+    const { data: apiKeysData, error: dbError } = await supabaseAdmin
+      .from('api_keys_config')
+      .select('*')
+      .order('category', { ascending: true })
+      .order('service_name', { ascending: true });
+
+    if (dbError) {
+      console.error('Error fetching API keys:', dbError);
+      throw new Error('Failed to load API keys');
+    }
+
+    // Transform data for frontend
+    const apiKeys = (apiKeysData || []).map(key => {
+      const hasValue = key.key_value && key.key_value.length > 0;
+      let maskedValue = '(não configurado)';
       
-      let maskedValue = '';
-      if (value) {
-        // Show only last 4 characters
+      if (hasValue) {
         const visibleChars = 4;
-        if (value.length > visibleChars) {
-          maskedValue = '*'.repeat(Math.max(8, value.length - visibleChars)) + value.slice(-visibleChars);
+        if (key.key_value.length > visibleChars) {
+          maskedValue = '*'.repeat(Math.max(8, key.key_value.length - visibleChars)) + key.key_value.slice(-visibleChars);
         } else {
           maskedValue = '*'.repeat(8);
         }
       }
 
       return {
-        name: keyConfig.name,
-        service: keyConfig.service,
-        description: keyConfig.description,
-        category: keyConfig.category,
-        exists,
-        maskedValue: exists ? maskedValue : 'Não configurado',
-        canValidate: !!keyConfig.validationEndpoint,
-        readonly: false
+        id: key.id,
+        name: key.key_name,
+        service: key.service_name,
+        description: key.description || '',
+        category: key.category,
+        exists: hasValue,
+        maskedValue,
+        canValidate: key.key_name === 'OPENAI_API_KEY' || key.key_name === 'RESEND_API_KEY',
+        readonly: false,
       };
     });
 
@@ -132,25 +109,19 @@ const handler = async (req: Request): Promise<Response> => {
         user_agent: req.headers.get('user-agent')
       });
     } catch (auditError) {
-      // Log error but don't fail the request
       console.error('Failed to log audit event:', auditError);
     }
 
     return new Response(
-      JSON.stringify({ apiKeys: apiKeysInfo }),
-      {
-        status: 200,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      }
+      JSON.stringify({ apiKeys }),
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
+
   } catch (error: any) {
     console.error('Error in get-api-keys-info:', error);
     return new Response(
       JSON.stringify({ error: error.message }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      }
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 };

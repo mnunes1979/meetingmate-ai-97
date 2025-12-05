@@ -123,6 +123,45 @@ export type Database = {
         }
         Relationships: []
       }
+      api_keys_config: {
+        Row: {
+          category: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          key_name: string
+          key_value: string
+          service_name: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          key_name: string
+          key_value: string
+          service_name: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          key_name?: string
+          key_value?: string
+          service_name?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       audit_logs: {
         Row: {
           action: string
@@ -1128,6 +1167,7 @@ export type Database = {
     Functions: {
       admin_can_manage_users: { Args: { _user_id: string }; Returns: boolean }
       cleanup_expired_data: { Args: never; Returns: undefined }
+      get_api_key_value: { Args: { p_key_name: string }; Returns: string }
       get_google_access_token: {
         Args: { _user_id: string }
         Returns: {

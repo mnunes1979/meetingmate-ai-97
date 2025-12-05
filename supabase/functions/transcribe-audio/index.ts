@@ -2,6 +2,7 @@ import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
+import { getApiKey } from "../_shared/get-api-key.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -210,11 +211,11 @@ serve(async (req) => {
       throw new Error('Audio file is too small or corrupted. Please record at least 3 seconds of clear audio.');
     }
     
-    // Get OpenAI key
-    const openaiKey = Deno.env.get('OPENAI_API_KEY');
+    // Get OpenAI key from database or environment
+    const openaiKey = await getApiKey('OPENAI_API_KEY');
     if (!openaiKey) {
       console.error('OPENAI_API_KEY not configured');
-      throw new Error('OpenAI API key not configured');
+      throw new Error('OpenAI API key não configurada. Configure em API Keys.');
     }
     
     const audioMimeType = mime || 'audio/webm';

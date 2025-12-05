@@ -2,8 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { Resend } from "https://esm.sh/resend@4.0.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
-
-const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
+import { getApiKeys } from "../_shared/get-api-key.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -43,6 +42,19 @@ const handler = async (req: Request): Promise<Response> => {
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    // Get API keys from database or environment
+    const apiKeys = await getApiKeys(['RESEND_API_KEY', 'RESEND_FROM']);
+    const resendApiKey = apiKeys['RESEND_API_KEY'];
+    
+    if (!resendApiKey) {
+      return new Response(
+        JSON.stringify({ error: 'Resend API key não configurada. Configure em API Keys.', success: false }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const resend = new Resend(resendApiKey);
 
     // Check rate limiting
     const supabaseAdmin = createClient(
@@ -115,7 +127,7 @@ const handler = async (req: Request): Promise<Response> => {
       .join('\n');
 
     // Get and validate FROM address
-    let fromAddressRaw = (Deno.env.get('RESEND_FROM') || 'AfterMeeting <no-reply@aftermeeting.andorsoft-lab.com>').trim();
+    let fromAddressRaw = (apiKeys['RESEND_FROM'] || 'AfterMeeting <no-reply@aftermeeting.andorsoft-lab.com>').trim();
     if ((fromAddressRaw.startsWith('"') && fromAddressRaw.endsWith('"')) || (fromAddressRaw.startsWith("'") && fromAddressRaw.endsWith("'"))) {
       fromAddressRaw = fromAddressRaw.slice(1, -1).trim();
     }

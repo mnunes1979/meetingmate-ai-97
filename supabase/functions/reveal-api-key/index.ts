@@ -25,7 +25,6 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Decode JWT (verify_jwt=true already validated)
     const token = authHeader.replace('Bearer ', '').trim();
     let userId: string | null = null;
     let userEmail: string | null = null;
@@ -47,12 +46,12 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Verify admin role
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
+    // Check admin role
     const { data: roles } = await supabaseAdmin
       .from('user_roles')
       .select('role')
@@ -69,30 +68,34 @@ const handler = async (req: Request): Promise<Response> => {
     const requestData = await req.json();
     const { keyName } = revealSchema.parse(requestData);
 
-    // Get the actual key value
-    const keyValue = Deno.env.get(keyName);
-    
-    if (!keyValue) {
+    // Get the key value from database
+    const { data: keyData, error: dbError } = await supabaseAdmin
+      .from('api_keys_config')
+      .select('key_value, service_name')
+      .eq('key_name', keyName)
+      .single();
+
+    if (dbError || !keyData) {
       return new Response(
-        JSON.stringify({ error: 'API key not found or not configured' }),
+        JSON.stringify({ error: 'Chave não encontrada' }),
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Determine service name
-    let serviceName = keyName;
-    if (keyName.includes('OPENAI')) serviceName = 'OpenAI';
-    else if (keyName.includes('GOOGLE')) serviceName = 'Google Calendar';
-    else if (keyName.includes('RESEND')) serviceName = 'Resend';
-    else if (keyName.includes('LOVABLE')) serviceName = 'Lovable AI';
+    if (!keyData.key_value || keyData.key_value.length === 0) {
+      return new Response(
+        JSON.stringify({ error: 'Chave não configurada' }),
+        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
-    // Log the reveal action (CRITICAL SECURITY LOG - non-blocking)
+    // Log the reveal action
     try {
       await supabaseAdmin.from('api_key_audit_logs').insert({
         user_id: userId,
         action: 'revealed',
         key_name: keyName,
-        service_name: serviceName,
+        service_name: keyData.service_name,
         result: 'success',
         ip_address: req.headers.get('x-forwarded-for')?.split(',')[0] || null,
         user_agent: req.headers.get('user-agent')
@@ -100,25 +103,19 @@ const handler = async (req: Request): Promise<Response> => {
       
       console.log(`[SECURITY] API key ${keyName} revealed by user ${userEmail ?? userId}`);
     } catch (auditError) {
-      // Log error but don't fail the request
       console.error('Failed to log audit event:', auditError);
     }
 
     return new Response(
-      JSON.stringify({ keyValue }),
-      {
-        status: 200,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      }
+      JSON.stringify({ keyValue: keyData.key_value }),
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
+
   } catch (error: any) {
     console.error('Error in reveal-api-key:', error);
     return new Response(
       JSON.stringify({ error: error.message }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      }
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 };
