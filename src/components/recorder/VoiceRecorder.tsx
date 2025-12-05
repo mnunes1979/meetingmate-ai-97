@@ -11,7 +11,7 @@ import { AudioUploader } from "./AudioUploader";
 import logger from "@/lib/logger";
 
 interface VoiceRecorderProps {
-  onRecordingComplete: (audioBlob: Blob) => void;
+  onRecordingComplete: (audioBlob: Blob, useDiarization: boolean) => void;
   isProcessing: boolean;
 }
 
@@ -271,8 +271,8 @@ export const VoiceRecorder = ({ onRecordingComplete, isProcessing }: VoiceRecord
   const handleProcess = () => {
     logger.log('[VoiceRecorder] handleProcess called, audioBlob exists:', !!audioBlob, 'size:', audioBlob?.size);
     if (audioBlob) {
-      logger.log('[VoiceRecorder] Calling onRecordingComplete with blob');
-      onRecordingComplete(audioBlob);
+      logger.log('[VoiceRecorder] Calling onRecordingComplete with blob and diarization=true');
+      onRecordingComplete(audioBlob, true); // Meeting notes use diarization
     } else {
       logger.error('[VoiceRecorder] No audioBlob available!');
       toast({
@@ -305,7 +305,7 @@ export const VoiceRecorder = ({ onRecordingComplete, isProcessing }: VoiceRecord
       return;
     }
     const blob = new Blob([file], { type: file.type });
-    onRecordingComplete(blob);
+    onRecordingComplete(blob, true); // Uploaded meeting files also use diarization
   };
 
   return (
