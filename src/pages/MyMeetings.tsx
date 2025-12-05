@@ -303,7 +303,6 @@ const MyMeetings = () => {
               const topics = note.topics as string[] | null;
               
               const emailCount = note.raw_llm_output?.email_drafts?.length || 0;
-              const calendarCount = note.raw_llm_output?.calendar_events?.length || 0;
               
               return (
                 <Card
@@ -394,11 +393,6 @@ const MyMeetings = () => {
                         {emailCount > 0 && (
                           <Badge variant="secondary" className="bg-action-email/10 text-action-email text-xs">
                             {emailCount} {emailCount !== 1 ? 'Emails' : 'Email'}
-                          </Badge>
-                        )}
-                        {calendarCount > 0 && (
-                          <Badge variant="secondary" className="bg-action-calendar/10 text-action-calendar text-xs">
-                            {calendarCount} {calendarCount !== 1 ? 'Eventos' : 'Evento'}
                           </Badge>
                         )}
                       </div>

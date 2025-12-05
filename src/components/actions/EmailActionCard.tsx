@@ -142,11 +142,11 @@ export const EmailActionCard = ({ draft, onCreateDraft, onSend }: EmailActionCar
       case 'finance':
         return 'bg-sentiment-positive/10 text-sentiment-positive border-sentiment-positive/20';
       case 'tech':
-        return 'bg-action-trello/10 text-action-trello border-action-trello/20';
+        return 'bg-accent/10 text-accent border-accent/20';
       case 'sales':
         return 'bg-primary/10 text-primary border-primary/20';
       case 'support':
-        return 'bg-action-calendar/10 text-action-calendar border-action-calendar/20';
+        return 'bg-destructive/10 text-destructive border-destructive/20';
       case 'management':
         return 'bg-sentiment-neutral/10 text-sentiment-neutral border-sentiment-neutral/20';
       case 'custom':

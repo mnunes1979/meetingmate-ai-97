@@ -84,27 +84,10 @@
     "sentSuccess": "Email sent successfully",
     "error": "Could not send email"
   },
-  "calendar": {
-    "addToCalendar": "Add to Calendar",
-    "checkingAvailability": "Checking availability...",
-    "available": "Available",
-    "conflict": "Conflict",
-    "description": "Description",
-    "attendees": "Attendees",
-    "verifyAvailability": "Verify Availability",
-    "addEvent": "Add to Calendar",
-    "eventAdded": "Event Added!",
-    "eventAddedDesc": "The event has been added to your Google Calendar"
-  },
   "settings": {
     "title": "Settings",
     "integrations": "Integrations",
     "connectServices": "Connect your services to automate actions",
-    "googleCalendar": "Google Calendar",
-    "googleCalendarDesc": "Automatically add meetings to your Google calendar",
-    "connected": "Connected",
-    "disconnect": "Disconnect",
-    "connect": "Connect",
     "email": "Email",
     "emailConfigured": "Email sending system configured",
     "active": "Active"

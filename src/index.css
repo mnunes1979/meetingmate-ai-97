@@ -42,8 +42,6 @@ All colors MUST be HSL.
 
     /* Action type colors */
     --action-email: 215 90% 55%;
-    --action-calendar: 280 65% 60%;
-    --action-trello: 200 70% 50%;
 
     /* Status colors */
     --status-draft: 215 15% 45%;
@@ -86,8 +84,6 @@ All colors MUST be HSL.
 
     /* Action type colors (dark mode) */
     --action-email: 215 90% 65%;
-    --action-calendar: 280 60% 65%;
-    --action-trello: 200 65% 55%;
 
     /* Status colors (dark mode) */
     --status-draft: 215 15% 55%;
