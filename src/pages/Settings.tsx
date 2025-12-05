@@ -101,7 +101,7 @@ const Settings = () => {
 
           <div className="p-6 rounded-lg border border-border bg-card">
             <p className="text-muted-foreground text-center">
-              No hay integraciones externas configuradas.
+              Não há integrações externas configuradas.
             </p>
           </div>
         </div>
