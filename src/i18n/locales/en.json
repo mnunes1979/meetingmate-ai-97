@@ -31,7 +31,16 @@
     "pressToStart": "Press the microphone to start recording your notes",
     "myMeetings": "My Meetings"
   },
-  "recorder": {
+"recorder": {
+    "title": "Record Meeting",
+    "subtitle": "Press the microphone to start recording",
+    "startRecording": "Start Recording",
+    "micError": "Microphone Error",
+    "micErrorDesc": "Could not access microphone. Please check permissions.",
+    "audioTooShort": "Audio too short. Please record at least 5 seconds with clear voice.",
+    "audioNotAvailable": "Error: audio not available. Please record again.",
+    "consentLabel": "I declare that I have the consent of all participants to record and process this meeting, in compliance with GDPR.",
+    "consentRequired": "Please confirm consent before recording",
     "recording": "Recording...",
     "stopRecording": "Stop Recording",
     "retake": "Retake",

@@ -1167,6 +1167,10 @@ export type Database = {
     Functions: {
       admin_can_manage_users: { Args: { _user_id: string }; Returns: boolean }
       cleanup_expired_data: { Args: never; Returns: undefined }
+      gdpr_delete_meeting_cascade: {
+        Args: { _meeting_id: string; _user_id: string }
+        Returns: Json
+      }
       get_api_key_value: { Args: { p_key_name: string }; Returns: string }
       get_google_access_token: {
         Args: { _user_id: string }

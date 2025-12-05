@@ -1,7 +1,9 @@
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Mic, Square, RotateCcw, Upload, Loader2 } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import { Mic, Square, RotateCcw, Upload, Loader2, ShieldCheck } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from "react-i18next";
 
@@ -118,6 +120,7 @@ export const VoiceRecorder = ({ onRecordingComplete, isProcessing }: VoiceRecord
   const [audioURL, setAudioURL] = useState<string | null>(null);
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
   const [audioSize, setAudioSize] = useState<number>(0);
+  const [consentGiven, setConsentGiven] = useState(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
@@ -297,6 +300,27 @@ export const VoiceRecorder = ({ onRecordingComplete, isProcessing }: VoiceRecord
         </p>
       </div>
 
+      {/* RGPD Consent Checkbox */}
+      <div className="flex items-start space-x-3 p-4 bg-muted/50 rounded-lg border border-border/50">
+        <Checkbox
+          id="consent"
+          checked={consentGiven}
+          onCheckedChange={(checked) => setConsentGiven(checked === true)}
+          className="mt-0.5"
+        />
+        <div className="flex-1">
+          <Label 
+            htmlFor="consent" 
+            className="text-sm font-medium leading-relaxed cursor-pointer flex items-start gap-2"
+          >
+            <ShieldCheck className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
+            <span>
+              {t('recorder.consentLabel', 'Declaro que tenho o consentimento de todos os participantes para gravar e processar esta reunião, em conformidade com o RGPD.')}
+            </span>
+          </Label>
+        </div>
+      </div>
+
       <div className="flex flex-col items-center space-y-4 sm:space-y-6">
         {/* Recording visualizer */}
         <div className="relative">
@@ -371,8 +395,9 @@ export const VoiceRecorder = ({ onRecordingComplete, isProcessing }: VoiceRecord
             <Button
               size="lg"
               onClick={startRecording}
-              disabled={isProcessing}
+              disabled={isProcessing || !consentGiven}
               className="gap-2 w-full sm:w-auto text-sm sm:text-base"
+              title={!consentGiven ? t('recorder.consentRequired', 'Por favor, confirme o consentimento antes de gravar') : undefined}
             >
               <Mic className="w-4 h-4 sm:w-5 sm:h-5" />
               {t('recorder.startRecording')}
