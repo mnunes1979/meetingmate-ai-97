@@ -38,7 +38,7 @@ export const MobileNav = ({ isAdmin = false, userEmail, accessType = 'full' }: M
           <Menu className="h-5 w-5" />
         </Button>
       </SheetTrigger>
-      <SheetContent side="left" className="w-[280px] sm:w-[320px]">
+      <SheetContent side="left" className="w-[280px] sm:w-[320px] bg-background border-r border-border">
         <div className="flex flex-col h-full">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-lg font-semibold">{t('navigation.menu')}</h2>
