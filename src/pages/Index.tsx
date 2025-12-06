@@ -172,6 +172,12 @@ const Index = () => {
 
   const handleRecordingComplete = async (audioBlob: Blob, useDiarization: boolean = false) => {
     logger.log('[handleRecordingComplete] START - audioBlob size:', audioBlob.size, 'type:', audioBlob.type, 'useDiarization:', useDiarization);
+    
+    // Generate file path early so we can use it in error handling
+    let filePath = '';
+    let currentSession: { user: { id: string } } | null = null;
+    const recordingType = useDiarization ? 'meeting' : 'voice_note';
+    
     try {
       setProcessingStep('upload');
       logger.log('[handleRecordingComplete] Processing step set to upload');
@@ -184,7 +190,6 @@ const Index = () => {
 
       // Get current user for secure file storage with timeout
       logger.log('[Auth] Getting session...');
-      let currentSession: { user: { id: string } } | null = null;
       try {
         const sessionPromise = supabase.auth.getSession();
         const sessionTimeoutPromise = new Promise<never>((_, reject) => {
@@ -223,11 +228,12 @@ const Index = () => {
         .replace(/-+/g, '-')             // Replace multiple hyphens with single
         .replace(/^-|-$/g, '') || 'user';          // Remove leading/trailing hyphens
       const fileName = `${Date.now()}-${sanitizedName}.webm`;
-      const filePath = `${currentSession.user.id}/${fileName}`;
+      filePath = `${currentSession.user.id}/${fileName}`;
       
       // Upload audio with timeout to prevent hanging
       logger.log('[Upload] starting upload to storage', { filePath, blobSize: audioBlob.size });
       
+      let uploadSucceeded = false;
       try {
         const uploadResult = await Promise.race([
           supabase.storage
@@ -246,9 +252,27 @@ const Index = () => {
           throw new Error(`Falha no upload: ${uploadResult.error.message}`);
         }
         logger.log('[Upload] success');
+        uploadSucceeded = true;
       } catch (uploadErr: unknown) {
         const err = uploadErr as Error;
         logger.error('[Upload] exception:', uploadErr);
+        
+        // Try to save audio for later before throwing
+        if (currentSession?.user && !uploadSucceeded) {
+          try {
+            // Try upload one more time for backup
+            await supabase.storage
+              .from('audio-recordings')
+              .upload(filePath, audioBlob, {
+                contentType: audioBlob.type || 'audio/webm',
+                upsert: true,
+              });
+            uploadSucceeded = true;
+          } catch (backupErr) {
+            logger.error('[Upload] Backup upload also failed:', backupErr);
+          }
+        }
+        
         throw new Error(err.message || 'Falha ao carregar áudio. Tente novamente.');
       }
 
@@ -419,38 +443,43 @@ const Index = () => {
         status: err?.status
       });
       
-      // Save failed recording for later retry (if we have a file path)
+      // Save failed recording for later retry
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session?.user) {
-          const sanitizedName = (salesRepName || 'user')
-            .normalize('NFD')
-            .replace(/[\u0300-\u036f]/g, '')
-            .replace(/[^a-zA-Z0-9]/g, '-')
-            .replace(/-+/g, '-')
-            .replace(/^-|-$/g, '') || 'user';
-          const fileName = `${Date.now()}-${sanitizedName}.webm`;
-          const filePath = `${session.user.id}/${fileName}`;
+        // Try to get session if we don't have it
+        if (!currentSession) {
+          const { data: { session } } = await supabase.auth.getSession();
+          currentSession = session;
+        }
+        
+        if (currentSession?.user) {
+          // Generate path if we don't have one
+          if (!filePath) {
+            const sanitizedName = (salesRepName || 'user')
+              .normalize('NFD')
+              .replace(/[\u0300-\u036f]/g, '')
+              .replace(/[^a-zA-Z0-9]/g, '-')
+              .replace(/-+/g, '-')
+              .replace(/^-|-$/g, '') || 'user';
+            const fileName = `failed-${Date.now()}-${sanitizedName}.webm`;
+            filePath = `${currentSession.user.id}/${fileName}`;
+          }
           
-          // Check if audio was already uploaded (processingStep would be past 'upload')
-          const wasUploaded = processingStep !== 'upload';
-          
-          if (!wasUploaded) {
-            // Upload the audio first
+          // Always try to upload the audio for backup (upsert to avoid conflicts)
+          try {
             await supabase.storage
               .from('audio-recordings')
               .upload(filePath, audioBlob, {
                 contentType: audioBlob.type || 'audio/webm',
-                upsert: false,
+                upsert: true,
               });
+            logger.log('[handleRecordingComplete] Audio backed up to storage:', filePath);
+          } catch (uploadBackupErr) {
+            logger.error('[handleRecordingComplete] Failed to backup audio:', uploadBackupErr);
           }
           
-          // Determine recording type based on diarization
-          const recordingType = useDiarization ? 'meeting' : 'voice_note';
-          
           // Save to failed_audio_recordings table
-          await supabase.from('failed_audio_recordings').insert({
-            user_id: session.user.id,
+          const { error: insertError } = await supabase.from('failed_audio_recordings').insert({
+            user_id: currentSession.user.id,
             storage_path: filePath,
             original_filename: `${salesRepName || 'Gravação'}-${new Date().toISOString()}.webm`,
             mime_type: audioBlob.type || 'audio/webm',
@@ -459,12 +488,16 @@ const Index = () => {
             error_message: err.message || 'Erro desconhecido',
           });
           
-          logger.log('[handleRecordingComplete] Saved failed recording for retry:', filePath);
-          
-          toast({
-            title: "Gravação Guardada",
-            description: "O áudio foi guardado e pode ser reprocessado mais tarde em Administração → Gravações Pendentes.",
-          });
+          if (insertError) {
+            logger.error('[handleRecordingComplete] Failed to insert into failed_audio_recordings:', insertError);
+          } else {
+            logger.log('[handleRecordingComplete] Saved failed recording for retry:', filePath);
+            
+            toast({
+              title: "Gravação Guardada",
+              description: "O áudio foi guardado e pode ser reprocessado mais tarde em Administração → Gravações Pendentes.",
+            });
+          }
         }
       } catch (saveErr) {
         logger.error("[handleRecordingComplete] Failed to save for retry:", saveErr);
