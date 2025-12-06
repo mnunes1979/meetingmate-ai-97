@@ -1,17 +1,11 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 
 /**
- * Get API key from database or environment variable (fallback)
- * This allows admins to manage keys via UI while maintaining backward compatibility
+ * Get API key from database FIRST (admin UI managed), then fallback to environment variable.
+ * This ensures admin-configured keys take priority over Lovable secrets.
  */
 export async function getApiKey(keyName: string): Promise<string | null> {
-  // First check environment variable (backward compatibility with Lovable secrets)
-  const envValue = Deno.env.get(keyName);
-  if (envValue && envValue.length > 0) {
-    return envValue;
-  }
-
-  // Fall back to database
+  // First check database (admin UI managed keys take priority)
   try {
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -24,21 +18,23 @@ export async function getApiKey(keyName: string): Promise<string | null> {
       .eq('key_name', keyName)
       .single();
 
-    if (error || !data) {
-      console.log(`API key ${keyName} not found in database`);
-      return null;
+    if (!error && data && data.key_value && data.key_value.length > 0) {
+      console.log(`[getApiKey] Using ${keyName} from database`);
+      return data.key_value;
     }
-
-    if (!data.key_value || data.key_value.length === 0) {
-      console.log(`API key ${keyName} is empty in database`);
-      return null;
-    }
-
-    return data.key_value;
   } catch (error) {
-    console.error(`Error fetching API key ${keyName} from database:`, error);
-    return null;
+    console.error(`[getApiKey] Error fetching ${keyName} from database:`, error);
   }
+
+  // Fall back to environment variable (Lovable secrets)
+  const envValue = Deno.env.get(keyName);
+  if (envValue && envValue.length > 0) {
+    console.log(`[getApiKey] Using ${keyName} from environment variable`);
+    return envValue;
+  }
+
+  console.log(`[getApiKey] API key ${keyName} not found`);
+  return null;
 }
 
 /**

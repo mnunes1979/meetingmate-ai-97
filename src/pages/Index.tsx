@@ -419,6 +419,57 @@ const Index = () => {
         status: err?.status
       });
       
+      // Save failed recording for later retry (if we have a file path)
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+          const sanitizedName = (salesRepName || 'user')
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .replace(/[^a-zA-Z0-9]/g, '-')
+            .replace(/-+/g, '-')
+            .replace(/^-|-$/g, '') || 'user';
+          const fileName = `${Date.now()}-${sanitizedName}.webm`;
+          const filePath = `${session.user.id}/${fileName}`;
+          
+          // Check if audio was already uploaded (processingStep would be past 'upload')
+          const wasUploaded = processingStep !== 'upload';
+          
+          if (!wasUploaded) {
+            // Upload the audio first
+            await supabase.storage
+              .from('audio-recordings')
+              .upload(filePath, audioBlob, {
+                contentType: audioBlob.type || 'audio/webm',
+                upsert: false,
+              });
+          }
+          
+          // Determine recording type based on diarization
+          const recordingType = useDiarization ? 'meeting' : 'voice_note';
+          
+          // Save to failed_audio_recordings table
+          await supabase.from('failed_audio_recordings').insert({
+            user_id: session.user.id,
+            storage_path: filePath,
+            original_filename: `${salesRepName || 'Gravação'}-${new Date().toISOString()}.webm`,
+            mime_type: audioBlob.type || 'audio/webm',
+            file_size: audioBlob.size,
+            recording_type: recordingType,
+            error_message: err.message || 'Erro desconhecido',
+          });
+          
+          logger.log('[handleRecordingComplete] Saved failed recording for retry:', filePath);
+          
+          toast({
+            title: "Gravação Guardada",
+            description: "O áudio foi guardado e pode ser reprocessado mais tarde em Administração → Gravações Pendentes.",
+          });
+        }
+      } catch (saveErr) {
+        logger.error("[handleRecordingComplete] Failed to save for retry:", saveErr);
+      }
+      
       // Show specific error messages based on error type
       let title = t('errors.processingError', 'Erro de Processamento');
       let description = err.message || t('errors.processingErrorDesc', 'Ocorreu um erro durante o processamento');
