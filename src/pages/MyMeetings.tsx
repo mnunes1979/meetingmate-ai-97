@@ -188,56 +188,54 @@ const MyMeetings = () => {
 
   return (
     <AdminLayout title="As Minhas Reuniões">
-      <div className="max-w-6xl mx-auto space-y-6">
+      <div className="max-w-6xl mx-auto space-y-4 sm:space-y-6">
         {/* Filters */}
-        <div className="mb-4 sm:mb-6 space-y-3">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-            <h2 className="text-lg sm:text-xl font-semibold">
+        <div className="space-y-3">
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="text-base sm:text-lg lg:text-xl font-semibold">
               Histórico ({filteredNotes.length})
             </h2>
-            <Button onClick={() => loadNotes(user.id)} variant="outline" size="sm">
+            <Button onClick={() => loadNotes(user.id)} variant="outline" size="sm" className="flex-shrink-0">
               Atualizar
             </Button>
           </div>
           
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="flex items-center gap-2">
-              <Filter className="w-4 h-4 text-muted-foreground" />
-            </div>
-            
-            <div className="relative flex-1 min-w-[180px] max-w-[250px]">
+          <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+            <div className="relative flex-1">
               <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
               <Input
                 placeholder="Pesquisar cliente..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9 h-9"
+                className="pl-9 h-9 w-full"
               />
             </div>
 
-            <Select value={dateFilter} onValueChange={setDateFilter}>
-              <SelectTrigger className="w-[130px] h-9">
-                <SelectValue placeholder="Período" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="7">Últimos 7 dias</SelectItem>
-                <SelectItem value="30">Últimos 30 dias</SelectItem>
-                <SelectItem value="90">Últimos 90 dias</SelectItem>
-                <SelectItem value="all">Todo o período</SelectItem>
-              </SelectContent>
-            </Select>
+            <div className="flex gap-2">
+              <Select value={dateFilter} onValueChange={setDateFilter}>
+                <SelectTrigger className="w-full sm:w-[140px] h-9">
+                  <SelectValue placeholder="Período" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="7">Últimos 7 dias</SelectItem>
+                  <SelectItem value="30">Últimos 30 dias</SelectItem>
+                  <SelectItem value="90">Últimos 90 dias</SelectItem>
+                  <SelectItem value="all">Todo o período</SelectItem>
+                </SelectContent>
+              </Select>
 
-            <Select value={sentimentFilter} onValueChange={setSentimentFilter}>
-              <SelectTrigger className="w-[120px] h-9">
-                <SelectValue placeholder="Sentimento" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos</SelectItem>
-                <SelectItem value="positive">Positivo</SelectItem>
-                <SelectItem value="neutral">Neutro</SelectItem>
-                <SelectItem value="negative">Negativo</SelectItem>
-              </SelectContent>
-            </Select>
+              <Select value={sentimentFilter} onValueChange={setSentimentFilter}>
+                <SelectTrigger className="w-full sm:w-[130px] h-9">
+                  <SelectValue placeholder="Sentimento" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  <SelectItem value="positive">Positivo</SelectItem>
+                  <SelectItem value="neutral">Neutro</SelectItem>
+                  <SelectItem value="negative">Negativo</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </div>
 

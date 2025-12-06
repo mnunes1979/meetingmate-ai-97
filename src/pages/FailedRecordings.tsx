@@ -253,106 +253,169 @@ export default function FailedRecordings() {
 
   return (
     <AdminLayout title="Gravações Pendentes">
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight">
-              Gravações Pendentes
-            </h1>
-            <p className="text-muted-foreground">
-              Áudios que falharam no processamento e podem ser reprocessados
-            </p>
-          </div>
+      <div className="space-y-4 sm:space-y-6">
+        <div>
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight">
+            Gravações Pendentes
+          </h1>
+          <p className="text-sm sm:text-base text-muted-foreground">
+            Áudios que falharam no processamento
+          </p>
         </div>
 
         {recordings.length === 0 ? (
-          <Card className="p-12 text-center">
-            <FileAudio className="w-12 h-12 mx-auto text-muted-foreground/50 mb-4" />
-            <h3 className="text-lg font-medium mb-2">Sem Gravações Pendentes</h3>
-            <p className="text-muted-foreground">
+          <Card className="p-8 sm:p-12 text-center">
+            <FileAudio className="w-10 h-10 sm:w-12 sm:h-12 mx-auto text-muted-foreground/50 mb-4" />
+            <h3 className="text-base sm:text-lg font-medium mb-2">Sem Gravações Pendentes</h3>
+            <p className="text-sm text-muted-foreground">
               Não existem gravações falhadas para reprocessar.
             </p>
           </Card>
         ) : (
-          <Card>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Ficheiro</TableHead>
-                  <TableHead>Tipo</TableHead>
-                  <TableHead>Tamanho</TableHead>
-                  <TableHead>Tentativas</TableHead>
-                  <TableHead>Data</TableHead>
-                  <TableHead>Erro</TableHead>
-                  <TableHead className="text-right">Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {recordings.map((recording) => (
-                  <TableRow key={recording.id}>
-                    <TableCell className="font-medium">
-                      <div className="flex items-center gap-2">
-                        <FileAudio className="w-4 h-4 text-muted-foreground" />
-                        <span className="truncate max-w-[200px]">
-                          {recording.original_filename || recording.storage_path.split('/').pop()}
-                        </span>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={recording.recording_type === 'meeting' ? 'default' : 'secondary'}>
-                        {recording.recording_type === 'meeting' ? 'Reunião' : 'Nota de Voz'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>{formatSize(recording.file_size)}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline">
-                        {recording.retry_count}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      {format(new Date(recording.created_at), "dd MMM yyyy HH:mm", { locale: pt })}
-                    </TableCell>
-                    <TableCell>
-                      {recording.error_message && (
-                        <div className="flex items-center gap-1 text-destructive text-sm max-w-[200px] truncate" title={recording.error_message}>
-                          <AlertCircle className="w-3 h-3 flex-shrink-0" />
-                          <span className="truncate">{recording.error_message}</span>
-                        </div>
+          <>
+            {/* Mobile Card View */}
+            <div className="grid gap-4 md:hidden">
+              {recordings.map((recording) => (
+                <Card key={recording.id} className="p-4 space-y-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                      <FileAudio className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                      <span className="font-medium truncate text-sm">
+                        {recording.original_filename || recording.storage_path.split('/').pop()}
+                      </span>
+                    </div>
+                    <Badge variant={recording.recording_type === 'meeting' ? 'default' : 'secondary'} className="flex-shrink-0 text-xs">
+                      {recording.recording_type === 'meeting' ? 'Reunião' : 'Nota'}
+                    </Badge>
+                  </div>
+                  
+                  <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                    <span>{formatSize(recording.file_size)}</span>
+                    <span>•</span>
+                    <span>{format(new Date(recording.created_at), "dd MMM HH:mm", { locale: pt })}</span>
+                    <span>•</span>
+                    <span>{recording.retry_count} tentativas</span>
+                  </div>
+                  
+                  {recording.error_message && (
+                    <div className="flex items-start gap-1 text-destructive text-xs p-2 bg-destructive/10 rounded-lg">
+                      <AlertCircle className="w-3 h-3 flex-shrink-0 mt-0.5" />
+                      <span className="line-clamp-2">{recording.error_message}</span>
+                    </div>
+                  )}
+                  
+                  <div className="flex gap-2 pt-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1"
+                      onClick={() => {
+                        setSelectedType(recording.recording_type as 'meeting' | 'voice_note');
+                        setRetryDialog({ open: true, recording });
+                      }}
+                      disabled={processingId === recording.id}
+                    >
+                      {processingId === recording.id ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <RotateCcw className="w-4 h-4" />
                       )}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setSelectedType(recording.recording_type as 'meeting' | 'voice_note');
-                            setRetryDialog({ open: true, recording });
-                          }}
-                          disabled={processingId === recording.id}
-                        >
-                          {processingId === recording.id ? (
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                          ) : (
-                            <RotateCcw className="w-4 h-4" />
-                          )}
-                          <span className="ml-2 hidden sm:inline">Reprocessar</span>
-                        </Button>
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          onClick={() => setDeleteDialog({ open: true, id: recording.id })}
-                          disabled={processingId === recording.id}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
+                      <span className="ml-2">Reprocessar</span>
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => setDeleteDialog({ open: true, id: recording.id })}
+                      disabled={processingId === recording.id}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </Card>
+              ))}
+            </div>
+
+            {/* Desktop Table View */}
+            <Card className="hidden md:block overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Ficheiro</TableHead>
+                    <TableHead>Tipo</TableHead>
+                    <TableHead>Tamanho</TableHead>
+                    <TableHead>Tentativas</TableHead>
+                    <TableHead>Data</TableHead>
+                    <TableHead>Erro</TableHead>
+                    <TableHead className="text-right">Ações</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </Card>
+                </TableHeader>
+                <TableBody>
+                  {recordings.map((recording) => (
+                    <TableRow key={recording.id}>
+                      <TableCell className="font-medium">
+                        <div className="flex items-center gap-2">
+                          <FileAudio className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                          <span className="truncate max-w-[200px]">
+                            {recording.original_filename || recording.storage_path.split('/').pop()}
+                          </span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={recording.recording_type === 'meeting' ? 'default' : 'secondary'}>
+                          {recording.recording_type === 'meeting' ? 'Reunião' : 'Nota de Voz'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>{formatSize(recording.file_size)}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline">
+                          {recording.retry_count}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        {format(new Date(recording.created_at), "dd MMM yyyy HH:mm", { locale: pt })}
+                      </TableCell>
+                      <TableCell>
+                        {recording.error_message && (
+                          <div className="flex items-center gap-1 text-destructive text-sm max-w-[200px] truncate" title={recording.error_message}>
+                            <AlertCircle className="w-3 h-3 flex-shrink-0" />
+                            <span className="truncate">{recording.error_message}</span>
+                          </div>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setSelectedType(recording.recording_type as 'meeting' | 'voice_note');
+                              setRetryDialog({ open: true, recording });
+                            }}
+                            disabled={processingId === recording.id}
+                          >
+                            {processingId === recording.id ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <RotateCcw className="w-4 h-4" />
+                            )}
+                            <span className="ml-2">Reprocessar</span>
+                          </Button>
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => setDeleteDialog({ open: true, id: recording.id })}
+                            disabled={processingId === recording.id}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </Card>
+          </>
         )}
       </div>
 
