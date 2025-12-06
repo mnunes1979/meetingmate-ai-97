@@ -121,6 +121,23 @@ serve(async (req) => {
 **INPUT LANGUAGE CAPABILITY:**
 You can process audio transcripts in English, Portuguese (Brazilian or European), French, or Spanish. Identify the source language automatically and process it seamlessly.
 
+**SPEAKER IDENTIFICATION - CRITICAL:**
+The transcript may contain speaker labels like "Speaker 1:", "Speaker 2:", "Orador 1:", "Orador 2:", etc.
+Your CRITICAL task is to IDENTIFY the REAL NAMES of these speakers from the conversation content:
+- Look for introductions ("Olá, sou o João", "My name is Maria", "Aqui é o Pedro")
+- Look for how speakers address each other ("Obrigado, Carlos", "Maria, o que achas?")
+- Look for email signatures or mentions of names
+- Look for job title mentions combined with names
+
+In the "participants" array, you MUST:
+1. Map each speaker label to their real name if identifiable
+2. Include their role if mentioned (cliente, vendedor, técnico, gestor, etc.)
+3. Use the original speaker label only if NO name can be determined (e.g., "Orador 1")
+
+Example:
+If transcript says: "Speaker 1: Olá, sou o Carlos da empresa XYZ. Speaker 2: Prazer Carlos, eu sou a Maria, gestora de conta."
+Then participants should be: [{"name": "Carlos", "role": "Cliente - XYZ"}, {"name": "Maria", "role": "Gestora de conta"}]
+
 **OUTPUT CONSTRAINT - CRITICAL:**
 ALL output MUST be written in **European Portuguese (pt-PT)**. Never use Brazilian Portuguese expressions. Use formal European Portuguese conventions.
 
@@ -136,14 +153,14 @@ You MUST return a valid JSON object with these EXACT fields:
   "action_items": [
     {
       "task": "Description of the task",
-      "assignee": "Person responsible or 'A definir'",
+      "assignee": "Person's REAL NAME if identified, or 'A definir' if unknown",
       "priority": "High" | "Medium" | "Low"
     }
   ],
   "topics": ["Array of strings - Main topics discussed"],
   "formatted_report": "Markdown formatted report (see structure below)",
   "customer": { "name": "string or null", "company": "string or null" },
-  "participants": [{ "name": "string", "role": "string" }],
+  "participants": [{ "name": "REAL NAME or 'Orador X' if unknown", "role": "string describing their role" }],
   "intents": [{ "type": "SEND_EMAIL|NOTIFY_DEPARTMENT|SCHEDULE_MEETING|SEND_PROPOSAL|FOLLOW_UP", "description": "string", "priority": "low|medium|high", "assignee": "string" }],
   "email_drafts": [{ "audience": "client|finance|tech|sales|support|management", "subject": "string", "body_md": "string", "context": "string" }],
   "sales_opportunities": [{ "title": "string", "description": "string", "estimated_value": "low|medium|high", "urgency": "low|medium|high", "recommended_action": "string" }],
@@ -155,7 +172,10 @@ You MUST return a valid JSON object with these EXACT fields:
 **FORMATTED REPORT STRUCTURE (for formatted_report field):**
 
 # 📄 Resumo Executivo
-[2-3 sentences providing a high-level overview of the meeting purpose, participants, and main outcome]
+[2-3 sentences providing a high-level overview of the meeting purpose, participants (use REAL NAMES), and main outcome]
+
+# 👥 Participantes
+[List each participant with their real name and role if identified]
 
 # 🔑 Pontos Chave
 - [Key takeaway 1]
@@ -163,8 +183,8 @@ You MUST return a valid JSON object with these EXACT fields:
 - [Key takeaway 3]
 
 # ✅ Plano de Ação
-- [ ] [Task 1] — **Responsável:** [Name or "A definir"] — **Prioridade:** [Alta/Média/Baixa]
-- [ ] [Task 2] — **Responsável:** [Name or "A definir"] — **Prioridade:** [Alta/Média/Baixa]
+- [ ] [Task 1] — **Responsável:** [REAL NAME or "A definir"] — **Prioridade:** [Alta/Média/Baixa]
+- [ ] [Task 2] — **Responsável:** [REAL NAME or "A definir"] — **Prioridade:** [Alta/Média/Baixa]
 
 # 📊 Análise de Sentimento
 **Pontuação:** [sentiment_score]/100
@@ -188,11 +208,11 @@ You MUST return a valid JSON object with these EXACT fields:
 
 **CRITICAL RULES - DO NOT VIOLATE:**
 1. ALL text output MUST be in European Portuguese (pt-PT)
-2. NEVER invent participant names - only include if explicitly stated
-3. NEVER invent customer names or companies - only include if explicitly stated
-4. NEVER invent contact information (emails, phones, addresses)
-5. If no names mentioned, use empty arrays
-6. If customer not mentioned, set to null
+2. ALWAYS try to identify participant REAL NAMES from conversation content
+3. For action_items assignee, use REAL NAME if identified, "A definir" otherwise
+4. NEVER invent names - only use names explicitly spoken/mentioned in transcript
+5. NEVER invent contact information (emails, phones, addresses)
+6. If no names can be determined, keep "Orador 1", "Orador 2" format
 7. **Email signature:** Always end emails with "Com os melhores cumprimentos,\\n{{USER_NAME}}"
 8. Current date reference: ${new Date().toISOString().split('T')[0]}
 9. Timezone: Europe/Lisbon
