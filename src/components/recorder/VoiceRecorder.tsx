@@ -309,10 +309,10 @@ export const VoiceRecorder = ({ onRecordingComplete, isProcessing }: VoiceRecord
   };
 
   return (
-    <Card className="p-6 sm:p-8 space-y-6">
-      <div className="text-center space-y-2">
-        <h2 className="text-xl sm:text-2xl font-semibold tracking-tight">{t('recorder.title')}</h2>
-        <p className="text-sm sm:text-base text-muted-foreground">
+    <Card className="p-4 sm:p-6 lg:p-8 space-y-4 sm:space-y-6">
+      <div className="text-center space-y-1 sm:space-y-2">
+        <h2 className="text-lg sm:text-xl lg:text-2xl font-semibold tracking-tight">{t('recorder.title')}</h2>
+        <p className="text-xs sm:text-sm lg:text-base text-muted-foreground">
           {t('recorder.subtitle')}
         </p>
       </div>

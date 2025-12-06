@@ -26,44 +26,19 @@ const Auth = () => {
   const { toast } = useToast();
 
   useEffect(() => {
-    // Check initial session
+    // Check initial session - always redirect to main recording page
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (session) {
-        // Check if user is admin
-        const { data: roleData } = await supabase
-          .from("user_roles")
-          .select("role")
-          .eq("user_id", session.user.id)
-          .eq("role", "admin")
-          .single();
-        
-        if (roleData) {
-          navigate("/admin");
-        } else {
-          navigate("/");
-        }
+        // Always go to "/" (recording page) - the main use case is quick mobile recording
+        navigate("/");
       }
     });
 
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (session) {
-        // Defer Supabase calls with setTimeout to prevent deadlock
-        setTimeout(async () => {
-          // Check if user is admin
-          const { data: roleData } = await supabase
-            .from("user_roles")
-            .select("role")
-            .eq("user_id", session.user.id)
-            .eq("role", "admin")
-            .single();
-          
-          if (roleData) {
-            navigate("/admin");
-          } else {
-            navigate("/");
-          }
-        }, 0);
+        // Always redirect to main recording page for quick access
+        navigate("/");
       }
     });
 

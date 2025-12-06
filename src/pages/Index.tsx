@@ -812,9 +812,9 @@ const Index = () => {
 
   return (
     <AdminLayout title="Gravar">
-      <div className="space-y-8">
-        {/* Two recorder cards side by side */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
+      <div className="space-y-4 sm:space-y-6 lg:space-y-8">
+        {/* Two recorder cards - stack on mobile, side by side on desktop */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 lg:gap-6">
           <VoiceRecorder
             onRecordingComplete={handleRecordingComplete}
             isProcessing={!!processingStep}
