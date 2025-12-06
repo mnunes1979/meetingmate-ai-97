@@ -12,7 +12,7 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { Home, FileText, BarChart3, Building2, Users, Shield, Key, Server, FolderOpen, Mic2, CheckSquare } from "lucide-react";
+import { Home, FileText, BarChart3, Building2, Users, Shield, Key, Server, FolderOpen, Mic2, CheckSquare, AlertCircle } from "lucide-react";
 import { useUserAccess } from "@/hooks/useUserAccess";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -27,6 +27,7 @@ const userItems = [
 const adminItems = [
   { title: "Reuniões", url: "/admin", icon: FileText },
   { title: "Gestão Reuniões", url: "/admin/meetings", icon: FolderOpen },
+  { title: "Gravações Pendentes", url: "/admin/failed-recordings", icon: AlertCircle },
   { title: "Departamentos", url: "/departments", icon: Building2 },
   { title: "Utilizadores", url: "/admin/users", icon: Users },
   { title: "Logs de Segurança", url: "/admin/audit-logs", icon: Shield },

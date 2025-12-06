@@ -343,11 +343,12 @@ serve(async (req) => {
     
     if (useDiarization) {
       // Use Deepgram for meeting notes with speaker diarization
-      const deepgramKey = Deno.env.get('DEEPGRAM_API_KEY');
+      const deepgramKey = await getApiKey('DEEPGRAM_API_KEY');
       if (!deepgramKey) {
         console.error('DEEPGRAM_API_KEY not configured');
-        throw new Error('Deepgram API key não configurada. Configure em API Keys.');
+        throw new Error('Deepgram API key não configurada. Configure em Administração → API Keys.');
       }
+      console.log('[Transcribe] Using Deepgram for meeting note with diarization');
       
       transcriptionResult = await transcribeWithDeepgram(binaryAudio, audioMimeType, deepgramKey);
     } else {
@@ -355,8 +356,9 @@ serve(async (req) => {
       const openaiKey = await getApiKey('OPENAI_API_KEY');
       if (!openaiKey) {
         console.error('OPENAI_API_KEY not configured');
-        throw new Error('OpenAI API key não configurada. Configure em API Keys.');
+        throw new Error('OpenAI API key não configurada. Configure em Administração → API Keys.');
       }
+      console.log('[Transcribe] Using OpenAI Whisper for voice note');
       
       transcriptionResult = await transcribeWithWhisper(binaryAudio, audioMimeType, openaiKey);
     }

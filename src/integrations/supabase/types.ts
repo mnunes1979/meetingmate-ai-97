@@ -466,6 +466,48 @@ export type Database = {
           },
         ]
       }
+      failed_audio_recordings: {
+        Row: {
+          created_at: string
+          error_message: string | null
+          file_size: number | null
+          id: string
+          mime_type: string | null
+          original_filename: string | null
+          recording_type: string
+          retry_count: number | null
+          storage_path: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          error_message?: string | null
+          file_size?: number | null
+          id?: string
+          mime_type?: string | null
+          original_filename?: string | null
+          recording_type: string
+          retry_count?: number | null
+          storage_path: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          error_message?: string | null
+          file_size?: number | null
+          id?: string
+          mime_type?: string | null
+          original_filename?: string | null
+          recording_type?: string
+          retry_count?: number | null
+          storage_path?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       meeting_comments: {
         Row: {
           content: string
