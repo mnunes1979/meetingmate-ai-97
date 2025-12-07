@@ -84,8 +84,7 @@ const Tasks = () => {
 
       if (error) throw error;
       setTasks((data || []) as Task[]);
-    } catch (error: any) {
-      console.error("Error loading tasks:", error);
+    } catch (error: unknown) {
       toast({
         title: "Erro",
         description: "Erro ao carregar tarefas",
@@ -124,7 +123,7 @@ const Tasks = () => {
         title: "Tarefa atualizada",
         description: `Movida para "${COLUMNS.find(c => c.id === status)?.title}"`,
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: "Erro",
         description: "Erro ao atualizar tarefa",
@@ -162,7 +161,7 @@ const Tasks = () => {
         title: "Tarefa criada",
         description: "Nova tarefa adicionada com sucesso",
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: "Erro",
         description: "Erro ao criar tarefa",
@@ -186,7 +185,7 @@ const Tasks = () => {
         title: "Tarefa eliminada",
         description: "Tarefa removida com sucesso",
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: "Erro",
         description: "Erro ao eliminar tarefa",

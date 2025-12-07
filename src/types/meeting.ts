@@ -114,6 +114,22 @@ export interface MeetingData {
   user_id: string;
 }
 
+export interface EmailAction {
+  id: string;
+  user_id: string;
+  note_id: string;
+  audience: string;
+  subject: string;
+  body_md: string;
+  recipients: string[] | null;
+  status: string | null;
+  external_id: string | null;
+  error_message: string | null;
+  sent_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 // Recharts tooltip types
 export interface TooltipPayloadItem<TData = Record<string, unknown>, TValue = number> {
   value: TValue;

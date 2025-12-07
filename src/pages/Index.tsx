@@ -18,6 +18,7 @@ import { useTranslation } from "react-i18next";
 import { retryWithBackoff, parseEdgeFunctionError, TimeoutError, RateLimitError, PaymentRequiredError } from "@/lib/retry";
 import logger from "@/lib/logger";
 import AdminLayout from "@/components/admin/AdminLayout";
+import { getErrorMessage } from "@/lib/errorUtils";
 
 interface UserProfile {
   name: string | null;
@@ -527,7 +528,7 @@ const Index = () => {
     }
   };
 
-  const handleCreateEmailDraft = async (draft: any, recipients: string[]) => {
+  const handleCreateEmailDraft = async (draft: EmailDraft, recipients: string[]) => {
     if (!currentNoteId) return;
 
     try {
@@ -584,17 +585,16 @@ const Index = () => {
         title: t('email.draftSaved'),
         description: t('email.draftSavedDesc'),
       });
-    } catch (error: any) {
-      console.error('Error creating email draft:', error);
+    } catch (error: unknown) {
       toast({
         title: "Error",
-        description: error.message,
+        description: getErrorMessage(error),
         variant: "destructive",
       });
     }
   };
 
-  const handleSendEmail = async (draft: any, recipients: string[]) => {
+  const handleSendEmail = async (draft: EmailDraft, recipients: string[]) => {
     if (!currentNoteId || recipients.length === 0) return;
 
     try {
@@ -673,17 +673,17 @@ const Index = () => {
       } else {
         throw new Error(data?.error || 'Error desconegut');
       }
-    } catch (error: any) {
-      console.error('Error sending email:', error);
+    } catch (error: unknown) {
+      const errorMessage = getErrorMessage(error);
       
       // Check if it's a Resend domain validation error
-      const isDomainError = error.message?.includes('verify a domain') || error.message?.includes('validation_error');
+      const isDomainError = errorMessage.includes('verify a domain') || errorMessage.includes('validation_error');
       
       toast({
         title: t('email.sendError'),
         description: isDomainError 
           ? t('email.domainError')
-          : error.message || t('email.error'),
+          : errorMessage,
         variant: "destructive",
       });
 
@@ -693,7 +693,7 @@ const Index = () => {
           .from('email_actions')
           .update({ 
             status: 'error',
-            error_message: error.message 
+            error_message: errorMessage 
           })
           .eq('note_id', currentNoteId)
           .eq('subject', draft.subject);
@@ -805,11 +805,10 @@ const Index = () => {
         title: "Actualitzat",
         description: "Els canvis s'han guardat i aplicat a tot el document.",
       });
-    } catch (error: any) {
-      console.error('Error updating entities:', error);
+    } catch (error: unknown) {
       toast({
         title: "Error",
-        description: error.message,
+        description: getErrorMessage(error),
         variant: "destructive",
       });
     }
