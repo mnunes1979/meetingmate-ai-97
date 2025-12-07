@@ -40,11 +40,21 @@ serve(async (req) => {
   }
 
   try {
-    // Auth: allow CRON secret, or any authenticated user (admin gets all, user gets own)
+    // SECURITY: Strict authentication - CRON secret OR valid JWT required
     const cronSecret = Deno.env.get('CRON_SECRET');
     const authHeader = req.headers.get('Authorization');
 
-    const isCronJob = !!cronSecret && authHeader === `Bearer ${cronSecret}`;
+    // Fail fast if no authorization header
+    if (!authHeader) {
+      console.warn('Unauthorized: Missing Authorization header');
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized. Missing credentials.' }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Check CRON secret first (exact match required)
+    const isCronJob = !!cronSecret && cronSecret.length > 0 && authHeader === `Bearer ${cronSecret}`;
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -54,20 +64,21 @@ serve(async (req) => {
     let isAdmin = false;
 
     if (!isCronJob) {
-      const token = authHeader?.replace('Bearer ', '');
-      if (!token) {
-        console.warn('Unauthorized access attempt to send-renewal-alerts (missing token)');
+      // Not a CRON job - must be a valid user JWT
+      const token = authHeader.replace('Bearer ', '');
+      if (!token || token === authHeader) {
+        console.warn('Unauthorized: Invalid Authorization format');
         return new Response(
-          JSON.stringify({ error: 'Unauthorized. Login required.' }),
+          JSON.stringify({ error: 'Unauthorized. Invalid token format.' }),
           { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
 
       const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
       if (authError || !user) {
-        console.warn('Unauthorized access attempt to send-renewal-alerts (invalid token)');
+        console.warn('Unauthorized: Invalid or expired JWT token');
         return new Response(
-          JSON.stringify({ error: 'Unauthorized. Invalid token.' }),
+          JSON.stringify({ error: 'Unauthorized. Invalid or expired token.' }),
           { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
@@ -83,9 +94,9 @@ serve(async (req) => {
         .maybeSingle();
       isAdmin = !!role;
 
-      console.log(`${isAdmin ? 'Admin' : 'User'} ${actingUserId} triggered send-renewal-alerts`);
+      console.log(`Authenticated: ${isAdmin ? 'Admin' : 'User'} ${actingUserId}`);
     } else {
-      console.log('Cron job triggered send-renewal-alerts');
+      console.log('Authenticated: CRON job via secret');
     }
 
     const supabaseUrl2 = Deno.env.get("SUPABASE_URL")!;

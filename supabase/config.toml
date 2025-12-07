@@ -52,7 +52,7 @@ verify_jwt = true
 verify_jwt = true
 
 [functions.send-renewal-alerts]
-verify_jwt = false
+verify_jwt = true
 
 [functions.generate-followup-email]
 verify_jwt = true
