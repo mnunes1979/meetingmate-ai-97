@@ -56,22 +56,24 @@ export async function retryWithBackoff<T>(
       const result = await fn(abortController.signal);
       clearTimeout(timeoutId);
       return result;
-    } catch (error: any) {
+    } catch (error: unknown) {
       clearTimeout(timeoutId);
       
+      const err = error as Error;
+      
       // Check if operation was aborted (timeout)
-      if (error.name === 'AbortError' || abortController.signal.aborted) {
+      if (err.name === 'AbortError' || abortController.signal.aborted) {
         lastError = new TimeoutError(`Operation timed out after ${timeoutMs}ms`);
       } else {
-        lastError = error;
+        lastError = err;
       }
 
       // Don't retry on certain errors
       if (
         error instanceof PaymentRequiredError ||
         error instanceof RateLimitError ||
-        error.message?.includes('Payment required') ||
-        error.message?.includes('Rate limit')
+        err.message?.includes('Payment required') ||
+        err.message?.includes('Rate limit')
       ) {
         throw lastError;
       }
@@ -100,18 +102,22 @@ export async function retryWithBackoff<T>(
 /**
  * Parse error response from edge function
  */
-export function parseEdgeFunctionError(error: any): {
+interface ParsedError {
   status: number;
   message: string;
   isRetryable: boolean;
-} {
+}
+
+export function parseEdgeFunctionError(error: unknown): ParsedError {
   // Default values
   let status = 500;
   let message = 'Erro desconhecido';
   let isRetryable = true;
+  
+  const err = error as { message?: string } | null;
 
-  if (error?.message) {
-    message = error.message;
+  if (err?.message) {
+    message = err.message;
 
     // Check for specific error patterns
     if (message.includes('429') || message.includes('Rate limit')) {

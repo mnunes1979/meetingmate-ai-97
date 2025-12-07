@@ -32,7 +32,18 @@ export const AudioUploader = ({ onFileSelected, disabled, className }: AudioUplo
   const { t } = useTranslation();
 
   const validateFile = useCallback((file: File): boolean => {
-    // Check MIME type
+    // SECURITY: Strict client-side MIME type validation
+    // Check that file.type starts with 'audio/'
+    if (!file.type.startsWith('audio/')) {
+      toast({
+        title: t('upload.invalidFormat', 'Formato inválido'),
+        description: t('upload.audioOnly', 'Apenas ficheiros de áudio são permitidos'),
+        variant: "destructive",
+      });
+      return false;
+    }
+
+    // Additional check against allowlist
     if (!ACCEPTED_MIME_TYPES.includes(file.type)) {
       toast({
         title: t('upload.invalidFormat', 'Formato inválido'),
