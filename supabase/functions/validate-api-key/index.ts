@@ -112,14 +112,6 @@ const handler = async (req: Request): Promise<Response> => {
         if (!isValid) {
           errorMessage = `Invalid Lovable AI key (${response.status})`;
         }
-      } else if (keyName.includes('GOOGLE_CALENDAR')) {
-        serviceName = 'Google Calendar';
-        // Google OAuth credentials cannot be easily validated without full OAuth flow
-        // Just check format
-        isValid = keyValue.length > 10;
-        if (!isValid) {
-          errorMessage = 'Invalid format for Google Calendar credentials';
-        }
       } else if (keyName === 'RESEND_FROM') {
         serviceName = 'Resend';
         // Validate email format
