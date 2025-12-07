@@ -284,7 +284,7 @@ serve(async (req) => {
       );
     }
     
-    console.log('User authenticated:', user.id);
+    // User authenticated
 
     // Check rate limiting
     const supabaseAdmin = createClient(
@@ -380,12 +380,7 @@ serve(async (req) => {
       },
     });
     
-    console.log('Transcription successful:', {
-      language: transcriptionResult.language,
-      textLength: transcriptionResult.text.length,
-      useDiarization,
-      speakersDetected: transcriptionResult.speakers?.length || 0,
-    });
+    // Transcription completed successfully
 
     return new Response(
       JSON.stringify({ 

@@ -31,7 +31,7 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    console.log('Received webhook from Resend');
+    // Received webhook request
     
     // Validate webhook signature
     const webhookSecret = Deno.env.get('RESEND_WEBHOOK_SECRET');
@@ -68,7 +68,7 @@ const handler = async (req: Request): Promise<Response> => {
         'svix-timestamp': svixTimestamp,
         'svix-signature': svixSignature,
       }) as any;
-      console.log('Webhook signature verified successfully');
+      // Webhook signature verified
     } catch (err) {
       console.error('Webhook signature verification failed:', err);
       return new Response(
@@ -82,7 +82,7 @@ const handler = async (req: Request): Promise<Response> => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    console.log('Webhook payload validated:', JSON.stringify(payload, null, 2));
+    // Webhook payload validated
 
     const event = resendEventSchema.parse(payload);
     
@@ -112,7 +112,7 @@ const handler = async (req: Request): Promise<Response> => {
     let emailActionId = emailAction?.id;
 
     if (!emailAction) {
-      console.log('Email action not found for external_id, trying to find by recipient');
+      // Email action not found by external_id, searching by recipient
       
       // Find recent email_actions with this recipient
       const fiveMinutesAgo = new Date(new Date(event.created_at).getTime() - 5 * 60 * 1000).toISOString();
@@ -132,13 +132,10 @@ const handler = async (req: Request): Promise<Response> => {
       if (matchingAction) {
         userId = matchingAction.user_id;
         emailActionId = matchingAction.id;
-        console.log('Found matching action by recipient:', matchingAction.id);
       }
     }
 
-    if (!userId) {
-      console.log('Could not find user_id for event:', event.data.email_id);
-    }
+    // User lookup completed
 
     // Insert event with user_id if found
     const eventData: any = {
@@ -162,7 +159,7 @@ const handler = async (req: Request): Promise<Response> => {
       throw insertError;
     }
 
-    console.log('Event logged successfully:', eventType, 'for', recipientEmail);
+    // Event logged successfully
 
     return new Response(JSON.stringify({ success: true }), {
       status: 200,

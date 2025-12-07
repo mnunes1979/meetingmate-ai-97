@@ -100,7 +100,7 @@ const handler = async (req: Request): Promise<Response> => {
         throw new Error('Falha ao apagar API key');
       }
 
-      console.log(`[SECURITY] API key ${keyName} cleared by user ${userEmail ?? userId}`);
+      // API key cleared
     } else {
       // Update action
       if (!keyValue) {
@@ -145,7 +145,7 @@ const handler = async (req: Request): Promise<Response> => {
         }
       }
 
-      console.log(`[SECURITY] API key ${keyName} updated by user ${userEmail ?? userId}`);
+      // API key updated
     }
 
     // Determine service name for audit

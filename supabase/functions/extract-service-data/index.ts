@@ -34,13 +34,12 @@ function localParseCsv(csvText: string, providerName: string) {
     if (c > max) { max = c; delim = d; }
   }
   const headers = first.split(delim).map((h) => h.trim().toLowerCase());
-  console.info('CSV Headers detected:', headers);
+  // CSV Headers detected
   
   const idx = (alts: string[]) => {
     for (const a of alts) {
       const i = headers.findIndex((h) => h.includes(a));
       if (i !== -1) {
-        console.info(`Found column '${a}' at index ${i}`);
         return i;
       }
     }
@@ -78,7 +77,6 @@ function localParseCsv(csvText: string, providerName: string) {
   const normDate = (v?: string | null) => {
     if (!v) return null;
     const s = v.trim();
-    console.info(`Parsing date from: "${s}"`);
     
     // CRITICAL: Extract date from text that may contain prefixes like "autorenew_service_expiration_date 01/01/2026 01/01/2026"
     // or "Janeiro 2026 01/01/2026" or just "01/01/2026"
@@ -96,7 +94,6 @@ function localParseCsv(csvText: string, providerName: string) {
       // Basic validation
       if (parseInt(month) >= 1 && parseInt(month) <= 12 && parseInt(day) >= 1 && parseInt(day) <= 31) {
         foundDate = `${year}-${month.padStart(2,'0')}-${day.padStart(2,'0')}`;
-        console.info(`Found DD/MM/YYYY date: ${foundDate}`);
       }
     }
     
@@ -107,7 +104,6 @@ function localParseCsv(csvText: string, providerName: string) {
     const isoMatch = s.match(isoTimestamp);
     if (isoMatch) {
       foundDate = `${isoMatch[1]}-${isoMatch[2]}-${isoMatch[3]}`;
-      console.info(`Found ISO timestamp date: ${foundDate}`);
       return foundDate;
     }
     
@@ -116,11 +112,9 @@ function localParseCsv(csvText: string, providerName: string) {
     const yyyyMatch = s.match(yyyymmddPattern);
     if (yyyyMatch) {
       foundDate = `${yyyyMatch[1]}-${yyyyMatch[2].padStart(2,'0')}-${yyyyMatch[3].padStart(2,'0')}`;
-      console.info(`Found YYYY-MM-DD date: ${foundDate}`);
       return foundDate;
     }
     
-    console.warn(`Failed to parse any date from: "${s}"`);
     return null;
   };
   const services: any[] = [];
@@ -191,7 +185,7 @@ serve(async (req) => {
 
     const { document_id, isTabular }: ExtractionRequest = await req.json();
 
-    console.log('Processing document:', document_id);
+    // Processing document extraction
 
     // Fetch document from database
     const { data: document, error: docError } = await supabase
@@ -244,7 +238,7 @@ serve(async (req) => {
                   document.filename.toLowerCase().endsWith('.csv');
 
     if (isCSV) {
-      console.log('Processing CSV with AI:', document.filename);
+      // Processing CSV file
       
       // Extract provider name from filename
       const providerName = document.filename
@@ -252,11 +246,8 @@ serve(async (req) => {
         .replace(/[_-]/g, ' ')
         .trim();
       
-      console.log('Provider from filename:', providerName);
-      
       // Read CSV content
       const csvText = await fileData.text();
-      console.log('CSV content length:', csvText.length);
       
       // Use OpenAI to intelligently parse and extract data from CSV
       try {
@@ -362,23 +353,17 @@ ${csvText}`
         }
 
         const aiData = await aiResponse.json();
-        console.log('AI response received');
         const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
         if (!toolCall) {
-          console.error('No tool call in AI response:', JSON.stringify(aiData));
           throw new Error('AI did not return structured data');
         }
         extractedServices = JSON.parse(toolCall.function.arguments);
-        console.log(`AI extracted ${extractedServices.services.length} services from CSV`);
       } catch (e: any) {
-        const msg = e?.message || String(e);
-        console.error('AI extraction failed for CSV, falling back to local parser:', msg);
+        // Fallback to local parser if AI fails
         extractedServices = localParseCsv(csvText, providerName);
-        console.log(`Local CSV parser extracted ${extractedServices.services.length} services`);
       }
 
 // parsed by AI above or local parser fallback
-      console.log(`AI extracted ${extractedServices.services.length} services from CSV`);
       
     } else if (document.mime_type.includes('image')) {
       // For images, use OCR (would need actual OCR library in production)
@@ -430,14 +415,11 @@ ${csvText}`
 
       if (!ocrResponse.ok) {
         const errorData = await ocrResponse.text();
-        console.error('OCR API error:', errorData);
         throw new Error(`OCR failed: ${ocrResponse.status}`);
       }
 
       const ocrData = await ocrResponse.json();
       extractedText = ocrData.choices?.[0]?.message?.content || '';
-      console.log('Extracted text from image (length):', extractedText.length);
-      console.log('First 500 chars of extracted text:', extractedText.substring(0, 500));
     } else if (document.mime_type.includes('pdf')) {
       // For PDFs, extract text (would need pdf-parse or similar in production)
       extractedText = await fileData.text();
@@ -558,12 +540,9 @@ VALIDATION: Before returning, verify that:
       }
 
       const aiData = await openaiResponse.json();
-      console.log('AI extraction response received');
-      console.log('Full AI response (first 1000 chars):', JSON.stringify(aiData, null, 2).substring(0, 1000));
       
       const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
       if (!toolCall) {
-        console.error('No tool call in response');
         throw new Error('AI did not return structured data - possibly no real data found in image');
       }
 
@@ -580,7 +559,6 @@ VALIDATION: Before returning, verify that:
       );
       
       if (hasExampleData) {
-        console.error('WARNING: Detected example/fake data in extraction results');
         return new Response(
           JSON.stringify({ 
             success: false,
@@ -593,7 +571,6 @@ VALIDATION: Before returning, verify that:
     }
     
     const services = extractedServices.services || [];
-    console.log(`Processing ${services.length} services`);
 
     // Get user settings for alert offset
     const { data: settings } = await supabase
@@ -624,7 +601,7 @@ VALIDATION: Before returning, verify that:
           .maybeSingle();
 
         if (findProviderError) {
-          console.error('Provider lookup error:', findProviderError.message);
+          // Provider lookup failed
         }
 
         if (existingProvider?.id) {
@@ -638,7 +615,7 @@ VALIDATION: Before returning, verify that:
             .single();
 
           if (createProviderError) {
-            console.error('Provider create error:', createProviderError.message);
+            // Provider creation failed
           } else if (createdProvider) {
             providerId = createdProvider.id;
           }
@@ -657,7 +634,7 @@ VALIDATION: Before returning, verify that:
           .maybeSingle();
 
         if (findClientError) {
-          console.error('Client lookup error:', findClientError.message);
+          // Client lookup failed
         }
 
         if (existingClient?.id) {
@@ -669,7 +646,7 @@ VALIDATION: Before returning, verify that:
             .select('id')
             .single();
           if (createClientError) {
-            console.error('Client create error:', createClientError.message);
+            // Client creation failed
           } else if (createdClient) {
             clientId = createdClient.id;
           }
@@ -690,15 +667,14 @@ VALIDATION: Before returning, verify that:
           .maybeSingle();
 
         if (findServiceError) {
-          console.error('Service lookup error:', findServiceError.message);
+          // Service lookup failed
         }
 
         let newService: { id: string } | null = null;
         let serviceError = null;
 
         if (existingService?.id) {
-          // Update existing service instead of creating new one
-          console.log(`Updating existing service: ${serviceName} (ID: ${existingService.id})`);
+          // Update existing service
           const { data: updatedService, error: updateError } = await supabase
             .from('services')
             .update({
@@ -714,7 +690,6 @@ VALIDATION: Before returning, verify that:
           serviceError = updateError;
         } else {
           // Create new service
-          console.log(`Creating new service: ${serviceName}`);
           const { data: createdService, error: createError } = await supabase
             .from('services')
             .insert({
@@ -770,9 +745,7 @@ VALIDATION: Before returning, verify that:
           }
 
           if (!finalRenewalDate) {
-            const errMsg = `Missing renewal date for service: ${service.service_name}`;
-            console.error(errMsg);
-            errors.push({ service: service.service_name, error: errMsg });
+            errors.push({ service: service.service_name, error: 'Missing renewal date' });
             continue;
           }
 
@@ -784,7 +757,7 @@ VALIDATION: Before returning, verify that:
             .maybeSingle();
 
           if (findRenewalError) {
-            console.error('Renewal lookup error:', findRenewalError.message);
+            // Renewal lookup failed
           }
 
           let renewal: { id: string; renewal_date: string } | null = null;
@@ -793,7 +766,6 @@ VALIDATION: Before returning, verify that:
           if (existingRenewal?.id) {
             // Update existing renewal if the date is different
             if (existingRenewal.renewal_date !== finalRenewalDate) {
-              console.log(`Updating renewal date for service ${newService.id}: ${existingRenewal.renewal_date} -> ${finalRenewalDate}`);
               const { data: updatedRenewal, error: updateError } = await supabase
                 .from('renewals')
                 .update({
@@ -808,13 +780,11 @@ VALIDATION: Before returning, verify that:
               renewal = updatedRenewal;
               renewalError = updateError;
             } else {
-              // No change needed, just use existing
-              console.log(`Renewal already exists with same date for service ${newService.id}`);
+              // No change needed, use existing
               renewal = existingRenewal;
             }
           } else {
             // Create new renewal
-            console.log(`Creating new renewal for service ${newService.id}: ${finalRenewalDate}`);
             const { data: createdRenewal, error: createError } = await supabase
               .from('renewals')
               .insert({
@@ -830,7 +800,7 @@ VALIDATION: Before returning, verify that:
           }
 
           if (renewalError) {
-            console.error('Renewal operation error:', renewalError.message);
+            // Renewal operation failed
           }
 
           if (!renewalError && renewal) {

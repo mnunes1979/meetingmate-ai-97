@@ -107,7 +107,7 @@ serve(async (req) => {
     const requestData = await req.json();
     const { transcript, language, recordingDateTime } = processMeetingSchema.parse(requestData);
 
-    console.log('Processing meeting for user:', user.id);
+    // Processing meeting request
 
     // Get OpenAI API key from database or environment
     const openaiKey = await getApiKey('OPENAI_API_KEY');
@@ -219,7 +219,7 @@ You MUST return a valid JSON object with these EXACT fields:
 10. Be comprehensive - identify ALL actionable items from the conversation
 11. Return ONLY valid JSON - no markdown code blocks, no extra text`;
 
-    console.log('Sending request to OpenAI API...');
+    
     
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -247,7 +247,7 @@ You MUST return a valid JSON object with these EXACT fields:
     const data = await response.json();
     let content = data.choices[0].message.content;
     
-    console.log('OpenAI response received, parsing JSON...');
+    
     
     // Remove markdown code blocks if present (safety measure)
     content = content.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
@@ -256,8 +256,7 @@ You MUST return a valid JSON object with these EXACT fields:
     try {
       parsed = JSON.parse(content);
     } catch (parseError) {
-      console.error('Failed to parse AI response as JSON:', parseError);
-      console.error('Raw content:', content.substring(0, 500));
+      console.error('Failed to parse AI response as JSON');
       throw new Error('Failed to parse meeting analysis. Please try again.');
     }
 
@@ -312,14 +311,7 @@ You MUST return a valid JSON object with these EXACT fields:
       action: 'process_meeting',
     });
 
-    console.log('Meeting analysis successful:', {
-      summary_length: parsed.summary?.length,
-      sentiment_score: parsed.sentiment_score,
-      opportunities: parsed.opportunities?.length,
-      risks: parsed.risks?.length,
-      action_items: parsed.action_items?.length,
-      topics: parsed.topics?.length,
-    });
+    // Meeting analysis completed successfully
 
     // Return both structured_data format (for legacy compatibility) and new flat format
     return new Response(

@@ -101,7 +101,7 @@ const handler = async (req: Request): Promise<Response> => {
         user_agent: req.headers.get('user-agent')
       });
       
-      console.log(`[SECURITY] API key ${keyName} revealed by user ${userEmail ?? userId}`);
+      // API key reveal action logged
     } catch (auditError) {
       console.error('Failed to log audit event:', auditError);
     }
