@@ -1052,21 +1052,20 @@ export type Database = {
       get_safe_profile: {
         Args: { profile_id: string }
         Returns: {
+          access_type: Database["public"]["Enums"]["access_type"]
           active: boolean
           allowed_email_domains: Json
+          avatar_url: string
           created_at: string
+          department_id: string
           digest_email: string
           digest_hour: number
           email: string
-          google_calendar_id: string
-          google_calendar_summary: string
-          google_calendar_timezone: string
-          google_linked: boolean
           id: string
+          job_title: string
           name: string
           retention_days: number
           timezone: string
-          trello_linked: boolean
           updated_at: string
         }[]
       }
