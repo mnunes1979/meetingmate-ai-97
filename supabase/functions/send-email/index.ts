@@ -83,7 +83,7 @@ const handler = async (req: Request): Promise<Response> => {
       note_id: requestData.note_id,
     };
 
-    console.log('Sending email for user:', user.id, 'to:', recipients.length, 'recipients');
+    // Sending email request
 
     // Check allowed email domains
     const { data: profile } = await supabaseAdmin
@@ -139,7 +139,7 @@ const handler = async (req: Request): Promise<Response> => {
     const isValidFrom = emailRegex.test(fromAddressRaw) || namedEmailRegex.test(fromAddressRaw);
     const fromAddress = isValidFrom ? fromAddressRaw : 'AfterMeeting <no-reply@aftermeeting.andorsoft-lab.com>';
 
-    console.log('Using FROM address:', fromAddress);
+    
 
     const emailResponse = await resend.emails.send({
       from: fromAddress,
@@ -156,7 +156,7 @@ const handler = async (req: Request): Promise<Response> => {
       `,
     });
 
-    console.log("Email response:", emailResponse);
+    // Email sent successfully
 
     // If email was sent successfully, immediately create a 'sent' event
     if (emailResponse.data?.id) {

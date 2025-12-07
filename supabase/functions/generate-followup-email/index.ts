@@ -101,7 +101,7 @@ O email deve:
 
 Responde APENAS com o email, sem explicações adicionais. Usa formatação markdown.`;
 
-    console.log('Calling Lovable AI to generate email...');
+    // Generating follow-up email
 
     const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
@@ -142,7 +142,7 @@ Responde APENAS com o email, sem explicações adicionais. Usa formatação mark
     // Generate subject
     const subject = `Follow-up: Reunião ${customerCompany || customerName} - ${meeting.meeting_datetime ? new Date(meeting.meeting_datetime).toLocaleDateString('pt-PT') : 'Recente'}`;
 
-    console.log('Email generated successfully');
+    // Email generated successfully
 
     return new Response(JSON.stringify({
       subject,
