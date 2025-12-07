@@ -7,31 +7,58 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+interface ServiceData {
+  id: string;
+}
+
+interface RenewalData {
+  id: string;
+}
+
+interface AlertRecipient {
+  email: string;
+}
+
+interface RenewalSettings {
+  default_recipients: string[] | null;
+  email_template_subject: string | null;
+  email_template_body: string | null;
+}
+
+interface ServiceInfo {
+  service_name: string;
+  service_type: string;
+  user_id: string;
+  providers: { name: string };
+  clients: { name: string; email: string } | null;
+}
+
+interface RenewalInfo {
+  renewal_date: string;
+  cycle: string;
+  amount: number | null;
+  currency: string | null;
+  services: ServiceInfo;
+}
+
 interface RenewalAlert {
   id: string;
   renewal_id: string;
   alert_date: string;
-  renewals: {
-    renewal_date: string;
-    cycle: string;
-    amount: number;
-    currency: string;
-    services: {
-      service_name: string;
-      service_type: string;
-      user_id: string;
-      providers: {
-        name: string;
-      };
-      clients: {
-        name: string;
-        email: string;
-      } | null;
-    };
-  } | null;
-  alert_recipients: Array<{
-    email: string;
-  }>;
+  renewals: RenewalInfo | null;
+  alert_recipients: AlertRecipient[];
+}
+
+interface ResendEmailResponse {
+  data?: { id: string } | null;
+  error?: { statusCode?: number; name?: string; message?: string } | null;
+}
+
+interface AlertResult {
+  alert: string;
+  status: string;
+  data?: { id: string } | null;
+  error?: string;
 }
 
 serve(async (req) => {
@@ -94,9 +121,9 @@ serve(async (req) => {
         .maybeSingle();
       isAdmin = !!role;
 
-      console.log(`Authenticated: ${isAdmin ? 'Admin' : 'User'} ${actingUserId}`);
+      // Auth successful (no PII logging)
     } else {
-      console.log('Authenticated: CRON job via secret');
+      // CRON auth successful
     }
 
     const supabaseUrl2 = Deno.env.get("SUPABASE_URL")!;
@@ -131,7 +158,7 @@ serve(async (req) => {
         console.error('Error fetching user services:', svcErr);
         throw svcErr;
       }
-      const serviceIds = (myServices || []).map((s: any) => s.id);
+      const serviceIds = ((myServices || []) as ServiceData[]).map((s) => s.id);
       if (serviceIds.length === 0) {
         return new Response(
           JSON.stringify({ message: 'No pending alerts', count: 0 }),
@@ -146,7 +173,7 @@ serve(async (req) => {
         console.error('Error fetching user renewals:', renErr);
         throw renErr;
       }
-      renewalIdFilter = (myRenewals || []).map((r: any) => r.id);
+      renewalIdFilter = ((myRenewals || []) as RenewalData[]).map((r) => r.id);
       if (renewalIdFilter.length === 0) {
         return new Response(
           JSON.stringify({ message: 'No pending alerts', count: 0 }),
@@ -193,22 +220,21 @@ serve(async (req) => {
     }
 
     if (!alerts || alerts.length === 0) {
-      console.log('No pending alerts to send');
       return new Response(
         JSON.stringify({ message: 'No pending alerts', count: 0 }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
       );
     }
 
-    console.log(`Processing ${alerts.length} alerts`);
+    const typedAlerts = alerts as unknown as RenewalAlert[];
 
     const sleep = (ms: number) => new Promise((res) => setTimeout(res, ms));
 
     let successful = 0;
     let failed = 0;
-    const results: Array<{ alert: string; status: string; data?: any; error?: any }> = [];
+    const results: AlertResult[] = [];
 
-    for (const alert of alerts as any[]) {
+    for (const alert of typedAlerts) {
       try {
         if (!alert.renewals) {
           results.push({ alert: alert.id, status: 'skipped', error: 'no renewal data' });
@@ -240,22 +266,22 @@ serve(async (req) => {
         // Recipients
         let recipients: string[] = [];
         if (alert.alert_recipients && alert.alert_recipients.length > 0) {
-          recipients = alert.alert_recipients.map((r: any) => r.email);
+          recipients = alert.alert_recipients.map((r) => r.email);
         } else {
           const { data: settings } = await supabase
             .from('renewal_settings')
             .select('default_recipients')
             .eq('user_id', service.user_id)
             .maybeSingle();
-          if (settings && Array.isArray((settings as any).default_recipients) && (settings as any).default_recipients.length > 0) {
-            recipients = (settings as any).default_recipients as string[];
+          const typedSettings = settings as RenewalSettings | null;
+          if (typedSettings?.default_recipients && typedSettings.default_recipients.length > 0) {
+            recipients = typedSettings.default_recipients;
           } else if (client?.email) {
             recipients = [client.email];
           }
         }
 
         if (recipients.length === 0) {
-          console.log(`No recipients for alert ${alert.id}, skipping`);
           results.push({ alert: alert.id, status: 'skipped', error: 'no recipients' });
           continue;
         }
@@ -304,9 +330,7 @@ serve(async (req) => {
 
         const fullHtml = `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head><body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;"><div style="background-color: #f9fafb; padding: 20px; border-radius: 8px;">${htmlBody}</div><div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb; text-align: center; color: #6b7280; font-size: 14px;"><p>Sistema de Gestão de Renovações</p><p style="font-size: 12px;">Este é um email automático, por favor não responda.</p></div></body></html>`;
 
-        console.log(`Sending alert ${alert.id} to ${recipients.join(', ')}`);
-
-        let emailResponse = await resend.emails.send({
+        let emailResponse: ResendEmailResponse = await resend.emails.send({
           from: resendFrom,
           to: recipients,
           subject,
@@ -314,8 +338,7 @@ serve(async (req) => {
         });
 
         // Retry once with safe fallback if the 'from' is invalid
-        if ((emailResponse as any)?.error && ((emailResponse as any).error.statusCode === 422 || (emailResponse as any).error.name === 'validation_error')) {
-          console.warn(`Invalid FROM header detected. Retrying alert ${alert.id} with fallback sender.`);
+        if (emailResponse?.error && (emailResponse.error.statusCode === 422 || emailResponse.error.name === 'validation_error')) {
           emailResponse = await resend.emails.send({
             from: 'Renovações <onboarding@resend.dev>',
             to: recipients,
@@ -324,35 +347,33 @@ serve(async (req) => {
           });
         }
 
-        if ((emailResponse as any)?.error) {
-          console.error(`Failed to send alert ${alert.id}:`, (emailResponse as any).error);
+        if (emailResponse?.error) {
+          console.error('Email send failed:', emailResponse.error.message);
           failed += 1;
-          results.push({ alert: alert.id, status: 'failed', error: (emailResponse as any).error });
+          results.push({ alert: alert.id, status: 'failed', error: emailResponse.error.message });
         } else {
           await supabase
             .from('alerts')
             .update({ status: 'sent', sent_at: new Date().toISOString() })
             .eq('id', alert.id);
           successful += 1;
-          results.push({ alert: alert.id, status: 'sent', data: (emailResponse as any).data });
+          results.push({ alert: alert.id, status: 'sent', data: emailResponse.data });
         }
 
-        // Rate limit: max 2 req/s => ~600ms delay per email
         await sleep(600);
       } catch (err) {
-        console.error(`Unexpected error sending alert ${alert?.id}:`, err);
+        const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+        console.error('Alert processing error:', errorMessage);
         failed += 1;
-        results.push({ alert: alert?.id, status: 'error', error: (err as any)?.message || err });
+        results.push({ alert: alert.id, status: 'error', error: errorMessage });
         await sleep(600);
       }
     }
 
-    console.log(`Completed: ${successful} sent, ${failed} failed out of ${alerts.length} total`);
-
     return new Response(
       JSON.stringify({
         message: 'Renewal alerts processed',
-        total: (alerts as any[]).length,
+        total: typedAlerts.length,
         successful,
         failed,
         results
@@ -363,10 +384,11 @@ serve(async (req) => {
       }
     );
 
-  } catch (error: any) {
-    console.error('Error in send-renewal-alerts function:', error);
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error('send-renewal-alerts error:', errorMessage);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: errorMessage }),
       {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
