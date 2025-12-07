@@ -31,17 +31,17 @@ interface MeetingNote {
   risks: string[] | null;
   action_items: Array<{ task: string; assignee: string; priority: string }> | null;
   topics: string[] | null;
-  raw_llm_output: any;
+  raw_llm_output: Record<string, unknown> | null;
 }
 
 const MyMeetings = () => {
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<{ id: string; email?: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const [notes, setNotes] = useState<MeetingNote[]>([]);
   const [dateFilter, setDateFilter] = useState<string>("7");
   const [sentimentFilter, setSentimentFilter] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
-  const [userProfile, setUserProfile] = useState<any>(null);
+  const [userProfile, setUserProfile] = useState<{ access_type: string; email: string; name?: string } | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -68,7 +68,7 @@ const MyMeetings = () => {
         .single();
       
       if (profile) {
-        setUserProfile(profile);
+        setUserProfile(profile as { access_type: string; email: string; name?: string });
         
         // Redirect renewals_only users to renewals page
         if (profile.access_type === 'renewals_only') {
@@ -256,7 +256,8 @@ const MyMeetings = () => {
               const actionItems = note.action_items as Array<{ task: string; assignee: string; priority: string }> | null;
               const topics = note.topics as string[] | null;
               
-              const emailCount = note.raw_llm_output?.email_drafts?.length || 0;
+              const rawOutput = note.raw_llm_output as { email_drafts?: unknown[] } | null;
+              const emailCount = rawOutput?.email_drafts?.length || 0;
               
               return (
                 <Card

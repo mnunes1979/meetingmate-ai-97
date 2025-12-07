@@ -70,10 +70,11 @@ const Auth = () => {
           variant: "destructive",
         });
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : t('auth.unexpectedError', 'Ocorreu um erro inesperado');
       toast({
         title: t('common.error'),
-        description: error.message || t('auth.unexpectedError', 'Ocorreu um erro inesperado'),
+        description: message,
         variant: "destructive",
       });
     } finally {

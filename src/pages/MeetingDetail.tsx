@@ -12,36 +12,53 @@ import { MeetingKanban } from "@/components/meeting/MeetingKanban";
 import { MeetingComments } from "@/components/meeting/MeetingComments";
 import { useTranslation } from "react-i18next";
 import AdminLayout from "@/components/admin/AdminLayout";
+import { 
+  MeetingData, 
+  Participant, 
+  ActionItem, 
+  SalesOpportunity, 
+  ClientNeed, 
+  Objection,
+  ProcessedMeeting,
+  MeetingSummary,
+  BusinessInsights
+} from "@/types/meeting";
+import { getErrorMessage } from "@/lib/errorUtils";
 
-interface MeetingData {
+interface EmailAction {
   id: string;
+  user_id: string;
+  note_id: string;
+  audience: string;
+  subject: string;
+  body_md: string;
+  recipients: string[] | null;
+  status: string | null;
+  external_id: string | null;
+  error_message: string | null;
+  sent_at: string | null;
   created_at: string;
-  meeting_datetime: string | null;
-  meeting_duration_min: number | null;
-  sales_rep_name: string | null;
-  customer_name: string | null;
-  customer_company: string | null;
-  language: string;
-  sentiment: string;
-  sentiment_confidence: number | null;
-  participants: any;
-  raw_llm_output: any;
-  transcript_text: string;
-  action_items: any[] | null;
+  updated_at: string;
+}
+
+interface AuthUser {
+  id: string;
+  email?: string;
 }
 
 const MeetingDetail = () => {
   const { id } = useParams<{ id: string }>();
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<AuthUser | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
   const [meeting, setMeeting] = useState<MeetingData | null>(null);
-  const [emailActions, setEmailActions] = useState<any[]>([]);
+  const [emailActions, setEmailActions] = useState<EmailAction[]>([]);
   const [emailDialogOpen, setEmailDialogOpen] = useState(false);
   const [importingTasks, setImportingTasks] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
   const { t, i18n } = useTranslation();
+
 
   const importActionItemsAsTasks = async () => {
     if (!meeting || !user) return;
@@ -58,7 +75,7 @@ const MeetingDetail = () => {
 
     setImportingTasks(true);
     try {
-      const tasks = actionItems.map((item: any) => ({
+      const tasks = actionItems.map((item: ActionItem | string) => ({
         user_id: user.id,
         meeting_id: meeting.id,
         title: typeof item === 'string' ? item : item.task || item.title || 'Tarefa',
@@ -77,10 +94,10 @@ const MeetingDetail = () => {
       });
 
       navigate('/tasks');
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: "Erro",
-        description: "Erro ao importar tarefas",
+        description: getErrorMessage(error),
         variant: "destructive",
       });
     } finally {
@@ -115,8 +132,7 @@ const MeetingDetail = () => {
       setIsAdmin(adminStatus);
 
       await loadMeeting(session.user.id, adminStatus);
-    } catch (error: any) {
-      console.error("Error:", error);
+    } catch (error: unknown) {
       navigate("/auth");
     }
   };
@@ -140,7 +156,7 @@ const MeetingDetail = () => {
       if (error) throw error;
       if (!data) throw new Error(t('meetingDetail.notFound'));
 
-      setMeeting(data as MeetingData);
+      setMeeting(data as unknown as MeetingData);
 
       // Carregar ações executadas
       const { data: emails } = await supabase
@@ -148,12 +164,12 @@ const MeetingDetail = () => {
         .select('*')
         .eq('note_id', id);
       
-      setEmailActions(emails || []);
+      setEmailActions((emails || []) as unknown as EmailAction[]);
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: t('common.error'),
-        description: error.message || t('meetingDetail.loadError'),
+        description: getErrorMessage(error),
         variant: "destructive",
       });
       navigate("/my-meetings");
@@ -193,11 +209,10 @@ const MeetingDetail = () => {
         title: "Sucesso",
         description: "Detalhes da reunião atualizados",
       });
-    } catch (error: any) {
-      console.error('Error updating meeting:', error);
+    } catch (error: unknown) {
       toast({
         title: "Erro",
-        description: "Erro ao atualizar os detalhes",
+        description: getErrorMessage(error),
         variant: "destructive",
       });
       throw error;
@@ -229,13 +244,16 @@ const MeetingDetail = () => {
 
   if (!meeting) return null;
 
-  const analysis = meeting.raw_llm_output || {};
-  const summary = analysis.summary || {};
+  const analysis = (meeting.raw_llm_output || {}) as ProcessedMeeting;
+  const rawSummary = analysis.summary;
+  const summary: MeetingSummary = typeof rawSummary === 'string' 
+    ? { overview: rawSummary } 
+    : (rawSummary || { overview: '' });
   const participants = analysis.participants || meeting.participants || [];
   const salesOpportunities = analysis.sales_opportunities || [];
   const clientNeeds = analysis.client_needs || [];
   const objections = analysis.objections || [];
-  const businessInsights = analysis.business_insights || {};
+  const businessInsights = (analysis.business_insights || {}) as BusinessInsights;
   const risks = analysis.risks || [];
   const actionItems = meeting.action_items || analysis.action_items || [];
 
